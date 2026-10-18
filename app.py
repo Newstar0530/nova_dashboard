@@ -39,6 +39,15 @@ STATIC = config.BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
+@app.middleware("http")
+async def _no_stale_assets(request, call_next):
+    """前端檔案每次都向伺服器確認（有 ETag，沒改就回 304），更新後不用強制重新整理。"""
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.exception_handler(ValueError)
 async def _bad_path(_req, exc):
     return JSONResponse({"detail": str(exc)}, status_code=400)

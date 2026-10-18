@@ -10,6 +10,7 @@ import config
 
 WIKILINK = re.compile(r"(!?)\[\[([^\]|#]+)(#[^\]|]*)?(\|([^\]]+))?\]\]")
 FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.S)
+CALLOUT = re.compile(r"^(>\s*)\[!(\w+)\][+-]?\s*", re.M)
 SKIP_DIRS = {".obsidian", ".trash", ".git"}
 
 
@@ -91,6 +92,8 @@ def _render(text: str) -> str:
         return f'<span class="wikilink missing">{label}</span>'
 
     body = WIKILINK.sub(repl, body)
+    # Obsidian callout「> [!info] 標題」→ 引言區塊，類型改成小標籤
+    body = CALLOUT.sub(lambda m: f'{m.group(1)}<span class="callout-type">{m.group(2).upper()}</span> ', body)
     return markdown.markdown(
         body, extensions=["fenced_code", "tables", "sane_lists", "nl2br", "toc"]
     )

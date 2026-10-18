@@ -235,7 +235,7 @@ async function loadNotion() {
       return s;
     }
     notionBody.innerHTML = `
-      <div class="small">${s.running ? "⏳ " : ""}${esc(s.message || "尚未同步")}</div>
+      ${s.message || !s.total_pages ? `<div class="small">${s.running ? "⏳ " : ""}${esc(s.message || "尚未同步")}</div>` : ""}
       <div class="muted small">已同步 ${s.total_pages} 頁${s.last_run ? "・上次 " + new Date(s.last_run).toLocaleString("zh-TW") : ""}</div>
       ${s.errors?.length ? `<details class="small"><summary>${s.errors.length} 個錯誤</summary>${s.errors.map(esc).join("<br>")}</details>` : ""}
       <div class="courses">${s.courses.map((c) => `<button class="chip" data-folder="${esc(c.folder)}">${esc(c.name)} · ${c.count}</button>`).join("")}</div>`;

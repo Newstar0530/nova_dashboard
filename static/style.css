@@ -474,3 +474,10 @@ body.has-ring .cursor-ring, body.has-ring .cursor-dot { opacity: 1; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .reveal, .bt .bt-w { opacity: 1; transform: none; filter: none; }
 }
+
+/* Obsidian callout 類型標籤 */
+.callout-type {
+  display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 999px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+  color: var(--tiffany); border: 1px solid rgba(95, 216, 207, .35); background: rgba(95, 216, 207, .08);
+}

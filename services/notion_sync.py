@@ -6,6 +6,7 @@
 """
 import json
 import mimetypes
+import re
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,7 @@ from services import vault
 
 API = "https://api.notion.com/v1"
 VERSION = "2022-06-28"
+DUP_SUFFIX = re.compile(r" \(\d+\)(?=\.md$)")  # unique_path 加上的「 (2)」
 
 _state_lock = threading.Lock()
 _progress = {"running": False, "last_run": None, "message": "", "synced": 0, "skipped": 0, "errors": []}
@@ -302,13 +304,17 @@ def sync(force: bool = False) -> dict:
                     meta = _page_meta(page)
                     folder = f"{config.CLASS_NOTES_DIR}/{vault.sanitize_filename(meta['course'])}"
                     target = f"{folder}/{vault.sanitize_filename(meta['title'])}.md"
+                    owner = next((k for k, v in state.items() if v["path"] == target), None)
+                    if prev and DUP_SUFFIX.sub("", prev["path"]) == target:
+                        # 同名頁面：沿用原本的「(2)」編號，避免蓋掉另一頁
+                        target = prev["path"]
+                    elif owner not in (None, pid) or (owner is None and vault.safe_path(target).exists()):
+                        target = vault.rel(vault.unique_path(vault.safe_path(target)))
                     # 標題/課程改了 → 移除舊檔
                     if prev and prev["path"] != target:
                         old = vault.safe_path(prev["path"])
                         if old.exists():
                             old.unlink()
-                    elif not prev and vault.safe_path(target).exists():
-                        target = vault.rel(vault.unique_path(vault.safe_path(target)))
                     body = _Converter(client, meta["title"]).convert(pid)
                     fm = [
                         "---",
