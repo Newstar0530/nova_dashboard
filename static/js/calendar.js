@@ -83,7 +83,7 @@ Nova.views.calendar = (() => {
       $("#cal-day-body").addEventListener("submit", async (e) => {
         e.preventDefault();
         const text = e.target.text.value.trim();
-        if (!text) return;
+        if (!text) return needInput(e.target.text, "先輸入待辦內容");
         try {
           await api("/api/tasks", { method: "POST", body: { text, due: selected } });
           toast(`已新增到 ${fmtDay(selected)}`);

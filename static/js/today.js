@@ -91,10 +91,11 @@ Nova.views.today = (() => {
     $("#task-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = $("#task-text").value.trim();
-      if (!text) return;
+      if (!text) return needInput($("#task-text"), "先輸入待辦內容");
       try {
         await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null, priority: $("#task-prio").value || null } });
         $("#task-text").value = ""; $("#task-due").value = "";
+        toast(`已新增待辦：${text}`);
         loadTasks();
       } catch (err) { toast(err.message); }
     });

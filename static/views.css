@@ -318,3 +318,13 @@
 .dlg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dlg-form .link-btn { font-size: 12.5px; text-decoration: none; }
 @media (hover: none) { .open-obs, .del { opacity: .6; } }
+
+/* 空白送出時的提示 */
+.shake { animation: shake .4s var(--ease); border-color: rgba(224, 132, 143, .8) !important; }
+@keyframes shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+
+/* 待辦輸入：文字框獨立一行，日期 / 優先度 / 新增在第二行，避免輸入框被擠到只剩幾個字寬 */
+#task-form { flex-wrap: wrap; }
+#task-form #task-text { flex: 1 1 100%; }
+#task-form #task-due { flex: 1 1 auto; width: auto; }
+#task-form .small-btn { margin-left: auto; }

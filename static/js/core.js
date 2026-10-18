@@ -54,6 +54,15 @@ function dueLabel(due) {
   return fmtDay(due);
 }
 
+// 輸入框空白時給回饋（不然按鈕看起來像沒反應）
+function needInput(input, msg) {
+  toast(msg);
+  input.focus();
+  input.classList.remove("shake");
+  void input.offsetWidth;  // 重新觸發動畫
+  input.classList.add("shake");
+}
+
 // ---------- 小對話框（取代 prompt） ----------
 function dialog(html, onSubmit) {
   const dlg = $("#dlg");
@@ -117,7 +126,7 @@ $("#capture").addEventListener("submit", (e) => { e.preventDefault(); capture(fa
 async function capture(asNote) {
   const input = $("#capture-text");
   const text = input.value.trim();
-  if (!text) return;
+  if (!text) return needInput(input, "先在上方輸入框寫下想記錄的內容");
   const save = async (title) => {
     const r = await api("/api/vault/capture", { method: "POST", body: { text, title } });
     input.value = "";
