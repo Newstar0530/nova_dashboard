@@ -38,20 +38,22 @@
   height: 100%; min-height: 760px;
   display: grid; gap: 16px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   grid-template-areas:
-    "sched tasks checkin"
-    "sched tasks focus"
-    "inbox tasks diary"
-    "mail  tasks diary";
+    "sched mid checkin"
+    "sched mid focus"
+    "mail  mid diary";
 }
 #card-schedule { grid-area: sched; }
-#card-tasks { grid-area: tasks; }
+/* 桌面三欄：行程很多時在卡片內捲動，不要把打卡/計時那兩列撐高（窄螢幕高度跟著內容，不能用） */
+@media (min-width: 1281px) { #card-schedule { contain: size; } }
+/* 中間欄：Inbox 在上、待辦在下，各佔一半高度 */
+.today-mid { grid-area: mid; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.today-mid > .panel { flex: 1 1 0; min-height: 0; }
 #card-checkin { grid-area: checkin; }
 #card-focus { grid-area: focus; }
 #card-mail { grid-area: mail; }
 #card-diary { grid-area: diary; }
-#card-inbox { grid-area: inbox; }
 
 .sub-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 6px 0 8px; }
 
@@ -263,10 +265,9 @@
   .today-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: none; height: auto;
-    grid-template-areas: "sched tasks" "checkin tasks" "focus tasks" "inbox diary" "mail diary";
+    grid-template-areas: "sched mid" "checkin mid" "focus mid" "mail diary";
   }
-  #card-schedule, #card-mail, #card-inbox { max-height: 360px; }
-  #card-tasks { max-height: 720px; }
+  #card-schedule, #card-mail { max-height: 360px; }
   .notes-layout { grid-template-columns: 280px minmax(0, 1fr); }
   #panel-notion { grid-column: 1 / -1; }
 }
@@ -284,7 +285,9 @@
   .sidenav a.active::before { left: 25%; right: 25%; top: -7px; bottom: auto; width: auto; height: 3px; }
   .view { height: auto; overflow: visible; padding: 12px 16px; }
   .today-grid, .cal-layout, .split, .notes-layout, .records-grid { display: flex; flex-direction: column; height: auto; min-height: 0; }
-  #card-schedule, #card-mail, #card-tasks, #card-inbox { max-height: 460px; }
+  #card-schedule, #card-mail { max-height: 460px; }
+  .today-mid { display: flex; }
+  .today-mid > .panel { flex: none; height: 440px; }
   #card-diary { min-height: 220px; }
   .cal-grid { min-height: 420px; }
   .cal-ev, .cal-task { font-size: 10px; padding: 0 3px; }
