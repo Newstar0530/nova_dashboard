@@ -39,6 +39,22 @@ git clone https://github.com/Newstar0530/nova_dashboard.git workbench
 
 vault 預設在 workbench 同層的 `知識庫`，可用 `.env` 的 `VAULT_PATH` 改成任何資料夾。
 
+### 在 Mac 上執行
+
+需要 **Python 3.10 以上**（macOS 內建的是 3.9，請從 https://www.python.org/downloads/ 安裝）。
+
+```bash
+mkdir -p ~/Documents/Nova && cd ~/Documents/Nova
+git clone https://github.com/Newstar0530/knowledge-vault.git 知識庫
+git clone https://github.com/Newstar0530/nova_dashboard.git workbench
+```
+
+1. 把 Windows 上的 `workbench/.env` 複製到 Mac 的 `workbench/.env`（密碼不在 GitHub 上，要自己帶過去，例如用 AirDrop 或 USB）
+2. 在 Finder 打開 `workbench`，雙擊 **`start.command`**（第一次若被擋：按右鍵 →「打開」→「打開」）
+3. 瀏覽器自動開啟 http://127.0.0.1:8765
+
+兩台電腦的知識庫靠 Obsidian 的 Git 外掛同步；Notion 同步會依筆記裡的 `notion_id` 認出已存在的檔案，兩台都按「同步」也不會產生重複檔。
+
 ## 設定郵件（學校信箱 → Gmail）
 
 學校封鎖了第三方 App 直接讀 Outlook，所以改成「學校信箱轉寄到 Gmail，工作台讀 Gmail」。

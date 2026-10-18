@@ -282,13 +282,53 @@ def _yaml(v) -> str:
     return json.dumps(str(v), ensure_ascii=False)
 
 
+FM_FIELD = re.compile(r"^(notion_id|last_edited|course):\s*(.+?)\s*$", re.M)
+
+
+def _scan_existing() -> dict:
+    """讀 vault 裡已經同步過的課堂筆記（看 frontmatter 的 notion_id）。
+
+    同步紀錄存在工作台資料夾、不在 vault 裡；換一台電腦（例如 Mac）或檔案被 Git 搬動時，
+    靠這個認回原本的檔案，才不會把每一頁都再同步成「(2)」重複檔。
+    """
+    found = {}
+    root = vault.safe_path(config.CLASS_NOTES_DIR)
+    if not root.exists():
+        return found
+    for p in root.rglob("*.md"):
+        try:
+            head = p.read_text(encoding="utf-8")[:1500]
+        except (UnicodeDecodeError, OSError):
+            continue
+        if not head.startswith("---"):
+            continue
+        fields = {k: v.strip().strip('"') for k, v in FM_FIELD.findall(head.split("\n---", 1)[0])}
+        if fields.get("notion_id"):
+            found[fields["notion_id"]] = {
+                "path": vault.rel(p),
+                "last_edited": fields.get("last_edited", ""),
+                "title": p.stem,
+                "course": fields.get("course", "未分類"),
+            }
+    return found
+
+
+def _adopt_existing(state: dict) -> dict:
+    """紀錄裡沒有、或紀錄的檔案已不存在的頁面，用 vault 裡現有的檔案補上。"""
+    for pid, info in _scan_existing().items():
+        prev = state.get(pid)
+        if not prev or not vault.safe_path(prev["path"]).exists():
+            state[pid] = info
+    return state
+
+
 def sync(force: bool = False) -> dict:
     if _progress["running"]:
         return status()
     _progress.update(running=True, message="同步中…", synced=0, skipped=0, errors=[])
     try:
         with _client() as client, _state_lock:
-            state = _load_state()
+            state = _adopt_existing(_load_state())
             pages = _query_database(client)
             _progress["message"] = f"共 {len(pages)} 頁"
             for page in pages:
@@ -350,7 +390,7 @@ def sync_in_background(force: bool = False):
 
 
 def status() -> dict:
-    state = _load_state() if config.NOTION_STATE_FILE.exists() else {}
+    state = _adopt_existing(_load_state() if config.NOTION_STATE_FILE.exists() else {})
     courses: dict[str, int] = {}
     for v in state.values():
         courses[v["course"]] = courses.get(v["course"], 0) + 1
