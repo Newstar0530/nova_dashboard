@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 .token_cache.json
 .notion_sync_state.json
+
+# 不小心把這個資料夾當 Obsidian vault 開啟時產生的設定
+.obsidian/
