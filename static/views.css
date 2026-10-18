@@ -33,27 +33,35 @@
 .view.active { display: block; animation: view-in .5s var(--ease); }
 @keyframes view-in { from { opacity: 0; transform: translateY(8px); } }
 
-/* ============ 今天 ============ */
-.today-grid {
-  height: 100%; min-height: 760px;
-  display: grid; gap: 16px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
-  grid-template-areas:
-    "sched mid checkin"
-    "sched mid focus"
-    "mail  mid diary";
+/* ============ 可拖曳調整大小的版面（splitter.js） ============ */
+.rs { display: flex; min-width: 0; min-height: 0; }
+.rs[data-dir="h"] { flex-direction: row; }
+.rs[data-dir="v"] { flex-direction: column; }
+.rs > :not(.rs-gutter) { flex: var(--g, 1) 1 0; min-width: 0; min-height: 0; }
+.rs-gutter { flex: none; position: relative; z-index: 2; touch-action: none; }
+.rs-gutter-h { width: 16px; cursor: col-resize; }
+.rs-gutter-v { height: 16px; cursor: row-resize; }
+/* 平常幾乎看不到，滑過或拖曳時亮起一條線 */
+.rs-gutter::after {
+  content: ""; position: absolute; border-radius: 2px; opacity: 0;
+  background: linear-gradient(var(--tiffany), var(--accent-1));
+  box-shadow: 0 0 12px rgba(95, 216, 207, .7);
+  transition: opacity .2s;
 }
-#card-schedule { grid-area: sched; }
-/* 桌面三欄：行程很多時在卡片內捲動，不要把打卡/計時那兩列撐高（窄螢幕高度跟著內容，不能用） */
-@media (min-width: 1281px) { #card-schedule { contain: size; } }
-/* 中間欄：Inbox 在上、待辦在下，各佔一半高度 */
-.today-mid { grid-area: mid; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
-.today-mid > .panel { flex: 1 1 0; min-height: 0; }
-#card-checkin { grid-area: checkin; }
-#card-focus { grid-area: focus; }
-#card-mail { grid-area: mail; }
-#card-diary { grid-area: diary; }
+.rs-gutter-h::after { left: 7px; width: 2px; top: 20%; bottom: 20%; }
+.rs-gutter-v::after { top: 7px; height: 2px; left: 20%; right: 20%; background: linear-gradient(90deg, var(--tiffany), var(--accent-1)); }
+.rs-gutter:hover::after, .rs-gutter.active::after { opacity: .9; }
+.rs-gutter-h.active::after { left: 7px; top: 0; bottom: 0; }
+.rs-gutter-v.active::after { top: 7px; left: 0; right: 0; }
+body.rs-dragging { user-select: none; }
+body.rs-dragging-h, body.rs-dragging-h * { cursor: col-resize !important; }
+body.rs-dragging-v, body.rs-dragging-v * { cursor: row-resize !important; }
+body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不要被 iframe 吃掉滑鼠 */
+
+/* ============ 今天 ============ */
+/* 三欄：左（行程 / 學校信件）、中（Inbox / 待辦）、右（打卡 / 計時 / 日記），每個框框都能拖曳調整 */
+.today-grid { height: 100%; min-height: 640px; }
+.rs-col > .panel { overflow: auto; }  /* 拖得很小時內容可以捲動，不會被切掉 */
 
 .sub-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 6px 0 8px; }
 
@@ -151,7 +159,7 @@
 .diary:focus { outline: none; border-color: rgba(139, 92, 246, .6); box-shadow: 0 0 0 3px rgba(139, 92, 246, .12); }
 
 /* ============ 行事曆 ============ */
-.cal-layout { height: 100%; min-height: 600px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 340px; }
+.cal-layout { height: 100%; min-height: 600px; }
 #cal-panel .panel-head h2 { font-family: var(--serif); }
 #cal-panel .actions { gap: 6px; align-items: center; }
 .cal-grid {
@@ -187,9 +195,9 @@
 #cal-day .task-form { margin-top: 12px; }
 
 /* ============ 郵件 / 筆記 ============ */
-.split { height: 100%; min-height: 560px; display: grid; gap: 16px; grid-template-columns: 380px minmax(0, 1fr); }
-.notes-layout { height: 100%; min-height: 560px; display: grid; gap: 16px; grid-template-columns: 300px minmax(0, 1fr) 260px; }
-#panel-notion { align-self: start; }
+.split { height: 100%; min-height: 560px; }
+.notes-layout { height: 100%; min-height: 560px; }
+#panel-notion { overflow: auto; }
 .hint { margin-top: 10px; }
 
 /* ============ 紀錄 ============ */
@@ -261,16 +269,6 @@
 .dlg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
 /* ============ RWD ============ */
-@media (max-width: 1280px) {
-  .today-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: none; height: auto;
-    grid-template-areas: "sched mid" "checkin mid" "focus mid" "mail diary";
-  }
-  #card-schedule, #card-mail { max-height: 360px; }
-  .notes-layout { grid-template-columns: 280px minmax(0, 1fr); }
-  #panel-notion { grid-column: 1 / -1; }
-}
 @media (max-width: 900px) {
   html, body { height: auto; }
   body { overflow: visible; min-height: 100vh; padding-bottom: 72px; }
@@ -284,16 +282,19 @@
   .sidenav a { flex: 1; padding: 6px 2px; font-size: 11px; }
   .sidenav a.active::before { left: 25%; right: 25%; top: -7px; bottom: auto; width: auto; height: 3px; }
   .view { height: auto; overflow: visible; padding: 12px 16px; }
+  /* 手機：不能拖曳，框框依序往下排，各給固定高度 */
+  .rs-gutter { display: none; }
+  .rs, .rs[data-dir="h"], .rs[data-dir="v"] { flex-direction: column; gap: 16px; }
+  .rs > :not(.rs-gutter) { flex: none; }
   .today-grid, .cal-layout, .split, .notes-layout, .records-grid { display: flex; flex-direction: column; height: auto; min-height: 0; }
+  .rs-col > .panel { overflow: visible; }
   #card-schedule, #card-mail { max-height: 460px; }
-  .today-mid { display: flex; }
-  .today-mid > .panel { flex: none; height: 440px; }
+  #card-inbox, #card-tasks { height: 440px; }
   #card-diary { min-height: 220px; }
   .cal-grid { min-height: 420px; }
   .cal-ev, .cal-task { font-size: 10px; padding: 0 3px; }
   .cal-ev i { display: none; }
   #panel-mail, #panel-vault { height: 460px; }
-  #panel-notion { align-self: stretch; }
   .reader { height: 75vh; min-height: 480px; }
   .reader-head { flex-direction: column; }
   .reader-body { padding: 8px 18px 36px; }

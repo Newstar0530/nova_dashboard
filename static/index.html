@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=8">
-  <link rel="stylesheet" href="/static/views.css?v=8">
+  <link rel="stylesheet" href="/static/style.css?v=10">
+  <link rel="stylesheet" href="/static/views.css?v=10">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -41,18 +41,28 @@
     <main class="views">
       <!-- ================= 今天 ================= -->
       <section class="view" data-view="today">
-        <div class="today-grid">
-          <section class="panel reveal" id="card-schedule">
-            <div class="panel-head">
-              <h2 class="bt">今日行程 <span class="eyebrow">Schedule</span></h2>
-              <a class="ghost" href="#calendar">行事曆 →</a>
-            </div>
-            <div id="schedule-body" class="scroll"></div>
-          </section>
+        <!-- 三欄都可以拖曳中間的縫隙調整大小（雙擊縫隙恢復預設） -->
+        <div class="today-grid rs" data-rs="today" data-dir="h">
+          <div class="rs rs-col" data-rs="today-left" data-dir="v" data-grow="1">
+            <section data-grow="1" class="panel reveal" id="card-schedule">
+              <div class="panel-head">
+                <h2 class="bt">今日行程 <span class="eyebrow">Schedule</span></h2>
+                <a class="ghost" href="#calendar">行事曆 →</a>
+              </div>
+              <div id="schedule-body" class="scroll"></div>
+            </section>
 
-          <!-- 中間欄：上 Inbox、下待辦，各佔一半 -->
-          <div class="today-mid" id="today-mid">
-            <section class="panel reveal" id="card-inbox">
+            <section data-grow="1" class="panel reveal" id="card-mail">
+              <div class="panel-head">
+                <h2 class="bt">學校信件 <span class="eyebrow">Mail</span></h2>
+                <a class="ghost" href="#mail">全部 →</a>
+              </div>
+              <div id="today-mail" class="scroll"></div>
+            </section>
+          </div>
+
+          <div class="rs rs-col" data-rs="today-mid" data-dir="v" data-grow="1.15">
+            <section data-grow="1" class="panel reveal" id="card-inbox">
               <div class="panel-head">
                 <h2 class="bt">Inbox <span class="eyebrow">Captures</span></h2>
                 <span class="muted small" id="inbox-count"></span>
@@ -60,7 +70,7 @@
               <div id="inbox-body" class="scroll"></div>
             </section>
 
-            <section class="panel reveal" id="card-tasks">
+            <section data-grow="1" class="panel reveal" id="card-tasks">
               <div class="panel-head">
                 <h2 class="bt">待辦 <span class="eyebrow">To-do</span></h2>
                 <label class="toggle small"><input type="checkbox" id="tasks-show-done"> 顯示已完成</label>
@@ -75,60 +85,54 @@
             </section>
           </div>
 
-          <section class="panel reveal" id="card-checkin">
-            <div class="panel-head">
-              <h2 class="bt">今日打卡 <span class="eyebrow">Check-in</span></h2>
-              <a class="ghost" href="#records">紀錄 →</a>
-            </div>
-            <div class="sub-label">心情</div>
-            <div class="mood-row" id="mood-row"></div>
-            <div class="sub-label">習慣</div>
-            <div class="habit-row" id="habit-row"></div>
-          </section>
-
-          <section class="panel reveal" id="card-focus">
-            <div class="panel-head">
-              <h2 class="bt">專注計時 <span class="eyebrow">Focus</span></h2>
-              <span class="muted small" id="focus-today"></span>
-            </div>
-            <div class="focus">
-              <div class="focus-ring" id="focus-ring"><span id="focus-time">25:00</span></div>
-              <div class="focus-side">
-                <select id="focus-subject" class="select"></select>
-                <div class="seg" id="focus-len">
-                  <button data-min="25" class="on">25</button><button data-min="50">50</button><button data-min="90">90</button>
-                </div>
-                <div class="focus-btns">
-                  <button class="small-btn" id="focus-start">開始</button>
-                  <button class="ghost" id="focus-stop" hidden>結束並記錄</button>
-                </div>
-                <button class="link-btn" id="focus-manual">手動補記時數</button>
+          <div class="rs rs-col" data-rs="today-right" data-dir="v" data-grow="1">
+            <section data-grow="0.95" class="panel reveal" id="card-checkin">
+              <div class="panel-head">
+                <h2 class="bt">今日打卡 <span class="eyebrow">Check-in</span></h2>
+                <a class="ghost" href="#records">紀錄 →</a>
               </div>
-            </div>
-          </section>
+              <div class="sub-label">心情</div>
+              <div class="mood-row" id="mood-row"></div>
+              <div class="sub-label">習慣</div>
+              <div class="habit-row" id="habit-row"></div>
+            </section>
 
-          <section class="panel reveal" id="card-mail">
-            <div class="panel-head">
-              <h2 class="bt">學校信件 <span class="eyebrow">Mail</span></h2>
-              <a class="ghost" href="#mail">全部 →</a>
-            </div>
-            <div id="today-mail" class="scroll"></div>
-          </section>
+            <section data-grow="0.9" class="panel reveal" id="card-focus">
+              <div class="panel-head">
+                <h2 class="bt">專注計時 <span class="eyebrow">Focus</span></h2>
+                <span class="muted small" id="focus-today"></span>
+              </div>
+              <div class="focus">
+                <div class="focus-ring" id="focus-ring"><span id="focus-time">25:00</span></div>
+                <div class="focus-side">
+                  <select id="focus-subject" class="select"></select>
+                  <div class="seg" id="focus-len">
+                    <button data-min="25" class="on">25</button><button data-min="50">50</button><button data-min="90">90</button>
+                  </div>
+                  <div class="focus-btns">
+                    <button class="small-btn" id="focus-start">開始</button>
+                    <button class="ghost" id="focus-stop" hidden>結束並記錄</button>
+                  </div>
+                  <button class="link-btn" id="focus-manual">手動補記時數</button>
+                </div>
+              </div>
+            </section>
 
-          <section class="panel reveal" id="card-diary">
-            <div class="panel-head">
-              <h2 class="bt">今日日記 <span class="eyebrow">Journal</span></h2>
-              <span class="muted small" id="diary-status"></span>
-            </div>
-            <textarea id="diary-text" class="diary" placeholder="今天發生了什麼？（自動儲存到 40 紀錄/日記）"></textarea>
-          </section>
+            <section data-grow="1.15" class="panel reveal" id="card-diary">
+              <div class="panel-head">
+                <h2 class="bt">今日日記 <span class="eyebrow">Journal</span></h2>
+                <span class="muted small" id="diary-status"></span>
+              </div>
+              <textarea id="diary-text" class="diary" placeholder="今天發生了什麼？（自動儲存到 40 紀錄/日記）"></textarea>
+            </section>
+          </div>
         </div>
       </section>
 
       <!-- ================= 行事曆 ================= -->
       <section class="view" data-view="calendar">
-        <div class="cal-layout">
-          <section class="panel reveal" id="cal-panel">
+        <div class="cal-layout rs" data-rs="calendar" data-dir="h">
+          <section data-grow="3" class="panel reveal" id="cal-panel">
             <div class="panel-head">
               <h2><span id="cal-title"></span> <span class="eyebrow">Calendar</span></h2>
               <div class="actions">
@@ -141,7 +145,7 @@
             <div id="cal-notice"></div>
             <div class="cal-grid" id="cal-grid"></div>
           </section>
-          <section class="panel reveal" id="cal-day">
+          <section data-grow="1" class="panel reveal" id="cal-day">
             <div class="panel-head"><h2 id="cal-day-title"></h2></div>
             <div id="cal-day-body" class="scroll"></div>
           </section>
@@ -150,8 +154,8 @@
 
       <!-- ================= 郵件 ================= -->
       <section class="view" data-view="mail">
-        <div class="split">
-          <section class="panel reveal" id="panel-mail">
+        <div class="split rs" data-rs="mail" data-dir="h">
+          <section data-grow="1" class="panel reveal" id="panel-mail">
             <div class="panel-head">
               <h2 class="bt">郵件 <span class="eyebrow">Mail</span></h2>
               <div class="actions"><button class="icon" id="mail-refresh" title="重新整理">⟳</button></div>
@@ -162,7 +166,7 @@
             </div>
             <div id="mail-body" class="scroll"></div>
           </section>
-          <section class="panel reader reveal" id="mail-reader">
+          <section data-grow="2.4" class="panel reader reveal" id="mail-reader">
             <div class="empty"><div class="big">✉</div><p>選一封信來閱讀</p></div>
           </section>
         </div>
@@ -170,8 +174,8 @@
 
       <!-- ================= 筆記 ================= -->
       <section class="view" data-view="notes">
-        <div class="notes-layout">
-          <section class="panel reveal" id="panel-vault">
+        <div class="notes-layout rs" data-rs="notes" data-dir="h">
+          <section data-grow="1" class="panel reveal" id="panel-vault">
             <div class="panel-head">
               <h2 class="bt">知識庫 <span class="eyebrow">Vault</span></h2>
               <span class="muted small" id="vault-name"></span>
@@ -183,10 +187,10 @@
             </div>
             <div class="list scroll" id="vault-list"></div>
           </section>
-          <section class="panel reader reveal" id="note-reader">
+          <section data-grow="3" class="panel reader reveal" id="note-reader">
             <div class="empty"><div class="big">✦</div><p>從左邊選一篇筆記</p></div>
           </section>
-          <section class="panel reveal" id="panel-notion">
+          <section data-grow="0.9" class="panel reveal" id="panel-notion">
             <div class="panel-head">
               <h2 class="bt">課堂筆記 <span class="eyebrow">Notion</span></h2>
               <button class="small-btn" id="notion-sync">同步</button>
@@ -231,13 +235,14 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=8"></script>
-  <script src="/static/js/charts.js?v=8"></script>
-  <script src="/static/js/today.js?v=8"></script>
-  <script src="/static/js/calendar.js?v=8"></script>
-  <script src="/static/js/mail.js?v=8"></script>
-  <script src="/static/js/notes.js?v=8"></script>
-  <script src="/static/js/records.js?v=8"></script>
-  <script src="/static/fx.js?v=8"></script>
+  <script src="/static/js/core.js?v=10"></script>
+  <script src="/static/js/splitter.js?v=10"></script>
+  <script src="/static/js/charts.js?v=10"></script>
+  <script src="/static/js/today.js?v=10"></script>
+  <script src="/static/js/calendar.js?v=10"></script>
+  <script src="/static/js/mail.js?v=10"></script>
+  <script src="/static/js/notes.js?v=10"></script>
+  <script src="/static/js/records.js?v=10"></script>
+  <script src="/static/fx.js?v=10"></script>
 </body>
 </html>
