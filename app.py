@@ -129,8 +129,8 @@ def mail_status():
 
 
 @app.get("/api/mail/messages")
-def mail_messages(top: int = 40, q: str | None = None, school: str | None = None):
-    return mail.list_messages(min(top, 100), q or None, school or None)
+def mail_messages(top: int = 40, q: str | None = None, school: str | None = None, only_school: bool = False):
+    return mail.list_messages(min(top, 100), q or None, school or None, only_school)
 
 
 @app.get("/api/mail/messages/{msg_id}")

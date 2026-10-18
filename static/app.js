@@ -139,6 +139,8 @@ async function capture(asNote) {
 const mailBody = $("#mail-body");
 let mailSchool = null;   // 目前篩選的學校標籤
 let mailReq = 0;         // 避免舊請求覆蓋新結果
+let onlySchool = true;   // 只看學校轉寄的信（記在瀏覽器）
+try { onlySchool = localStorage.getItem("nova.onlySchool") !== "0"; } catch {}
 
 async function loadMail() {
   const req = ++mailReq;
@@ -149,16 +151,16 @@ async function loadMail() {
       mailBody.innerHTML = `<div class="notice">尚未設定 Gmail。<br>請在 <code>workbench/.env</code> 填入 <code>GMAIL_ADDRESS</code> 與 <code>GMAIL_APP_PASSWORD</code>（步驟見 README）後重新啟動。</div>`;
       return;
     }
-    $("#mail-schools").innerHTML = s.schools.length
-      ? `<button class="chip${mailSchool ? "" : " on"}" data-school="">全部</button>` +
-        s.schools.map((x) => `<button class="chip${mailSchool === x.label ? " on" : ""}" data-school="${esc(x.label)}">${esc(x.label)}</button>
-          <a class="chip" href="${esc(x.link)}" target="_blank" title="開啟${esc(x.label)} Outlook（確認有沒有漏轉寄的信）">${esc(x.label)} Outlook ↗</a>`).join("")
-      : "";
+    $("#mail-schools").innerHTML =
+      `<button class="chip${onlySchool ? " on" : ""}" id="only-school" title="只顯示從學校 Outlook 轉寄過來的信">🏫 只看學校轉寄</button>` +
+      s.schools.map((x) => `<button class="chip${mailSchool === x.label ? " on" : ""}" data-school="${esc(x.label)}">${esc(x.label)}</button>
+        <a class="chip" href="${esc(x.link)}" target="_blank" title="開啟${esc(x.label)} Outlook（確認有沒有漏轉寄的信）">${esc(x.label)} Outlook ↗</a>`).join("");
     mailBody.innerHTML = `<p class="muted small">${esc(s.account)}・載入中…</p>`;
     const params = new URLSearchParams({ top: 40 });
     const q = $("#mail-search").value.trim();
     if (q) params.set("q", q);
     if (mailSchool) params.set("school", mailSchool);
+    else if (onlySchool) params.set("only_school", "true");
     const msgs = await api(`/api/mail/messages?${params}`);
     if (req !== mailReq) return;
     mailBody.innerHTML = `<p class="muted small">${esc(s.account)}</p>` + (msgs.length ? msgs.map((m) => `
@@ -166,7 +168,7 @@ async function loadMail() {
         <div class="mail-meta"><span>${m.important ? "⭐ " : ""}${esc(m.from)}</span><span>${m.has_attachments ? "📎 " : ""}${fmtTime(m.received)}</span></div>
         <div class="title">${esc(m.subject)}</div>
         ${m.school ? `<div class="sub"><span class="tag">${esc(m.school)}</span></div>` : ""}
-      </button>`).join("") : `<p class="muted small">${q || mailSchool ? "沒有符合的郵件" : "收件匣是空的 🎉"}</p>`);
+      </button>`).join("") : `<p class="muted small">${q || mailSchool || onlySchool ? "最近沒有符合的郵件" : "收件匣是空的 🎉"}</p>`);
   } catch (e) {
     if (req === mailReq) mailBody.innerHTML = `<div class="notice">${esc(e.message)}</div>`;
   }
@@ -175,7 +177,13 @@ async function loadMail() {
 $("#mail-schools").addEventListener("click", (e) => {
   const chip = e.target.closest("button.chip");
   if (!chip) return;
-  mailSchool = chip.dataset.school || null;
+  if (chip.id === "only-school") {
+    onlySchool = !onlySchool;
+    mailSchool = null;
+    try { localStorage.setItem("nova.onlySchool", onlySchool ? "1" : "0"); } catch {}
+  } else {
+    mailSchool = mailSchool === chip.dataset.school ? null : chip.dataset.school;  // 再點一次取消
+  }
   loadMail();
 });
 let mailSearchTimer;

@@ -34,7 +34,13 @@ vault 預設在 workbench 同層的 `知識庫`，可用 `.env` 的 `VAULT_PATH`
    GMAIL_APP_PASSWORD=16碼應用程式密碼
    MAIL_ACCOUNTS=A校=s123@a.edu.tw;B校=s456@b.edu.tw
    ```
-   `MAIL_ACCOUNTS` 可省略；填了之後郵件會標示來自哪間學校、可以篩選，並出現「開啟學校 Outlook」按鈕（用來確認有沒有漏轉寄的信）。
+   `MAIL_ACCOUNTS` 的值可以是完整地址或網域（例如 `清大=nthu.edu.tw`）。填了之後郵件會標示來自哪間學校、可以篩選，並出現「開啟學校 Outlook」按鈕（用來確認有沒有漏轉寄的信）。
+
+郵件區的「🏫 只看學校轉寄」開關（預設開啟）只顯示學校轉寄過來的信，判斷方式：
+- 信件帶有 Outlook / Exchange 轉寄標頭（`X-MS-Exchange-ForwardingLoop`、`Resent-From`），或
+- 收件者符合 `MAIL_ACCOUNTS` 裡的地址 / 網域（非 Outlook 的學校信箱靠這個判斷）
+
+Gmail 搜尋查不到這些標頭，所以篩選時會在本機掃描最近 400 封的標頭。
 5. 重啟工作台
 
 搜尋框支援 Gmail 語法，例如 `from:王教授`、`has:attachment`、`subject:期中考`、`newer_than:7d`。

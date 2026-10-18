@@ -13,7 +13,11 @@ import config
 from services import vault
 
 FOLDER = "INBOX"
-HEADER_FIELDS = "FROM TO CC SUBJECT DATE DELIVERED-TO X-FORWARDED-TO CONTENT-TYPE"
+# 後三個是 Outlook / Exchange 轉寄時才會加上的標頭，用來辨識「學校轉寄過來的信」
+FORWARD_HEADERS = ("Resent-From", "X-MS-Exchange-ForwardingLoop", "X-MS-Exchange-Inbox-Rules-Loop")
+HEADER_FIELDS = "FROM TO CC SUBJECT DATE DELIVERED-TO X-FORWARDED-TO CONTENT-TYPE " + " ".join(h.upper() for h in FORWARD_HEADERS)
+SCAN_LIMIT = 400  # 篩選學校信時，往回掃描的封數
+EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 
 
 class MailNotConfigured(Exception):
@@ -33,18 +37,30 @@ def _is_gmail() -> bool:
 
 
 def schools() -> list[dict]:
-    """.env 的 MAIL_ACCOUNTS（例：A校=a@x.edu.tw;B校=b@y.edu.tw）→ 用來分類轉寄來的信。"""
+    """.env 的 MAIL_ACCOUNTS → 用來分類轉寄來的信。
+
+    值可以是完整地址或網域，例：清大=s113@m113.nthu.edu.tw;B校=b.edu.tw
+    """
     out = []
     for item in config.MAIL_ACCOUNTS.split(";"):
         if "=" in item:
             label, addr = (s.strip() for s in item.split("=", 1))
             if label and addr:
+                hint = f"?login_hint={quote(addr)}" if "@" in addr else ""
                 out.append({
                     "label": label,
                     "address": addr.lower(),
-                    "link": f"https://outlook.office.com/mail/?login_hint={quote(addr)}",
+                    "link": f"https://outlook.office.com/mail/{hint}",
                 })
     return out
+
+
+def _matches(addr: str, pattern: str) -> bool:
+    """pattern 是完整地址 → 完全相同；是網域 → 地址網域等於或屬於該網域。"""
+    if "@" in pattern:
+        return addr == pattern
+    domain = addr.rsplit("@", 1)[-1]
+    return domain == pattern or domain.endswith("." + pattern)
 
 
 @contextmanager
@@ -81,29 +97,36 @@ def status() -> dict:
     }
 
 
-def _search(conn, q: str | None, school: str | None) -> list[bytes]:
-    terms = []
-    if school:
-        addr = next((s["address"] for s in schools() if s["label"] == school), school)
-        terms.append(f"{{to:{addr} cc:{addr} deliveredto:{addr}}}")  # Gmail 語法：{} = OR
-    if q:
-        terms.append(q)
-    if not terms:
+def _search(conn, q: str | None) -> list[bytes]:
+    if not q:
         typ, data = conn.uid("SEARCH", None, "ALL")
-    elif _is_gmail():
-        conn.literal = " ".join(terms).encode("utf-8")
-        typ, data = conn.uid("SEARCH", "CHARSET", "UTF-8", "X-GM-RAW")
     else:
-        conn.literal = (q or school or "").encode("utf-8")
-        typ, data = conn.uid("SEARCH", "CHARSET", "UTF-8", "TEXT")
+        conn.literal = q.encode("utf-8")
+        typ, data = conn.uid("SEARCH", "CHARSET", "UTF-8", "X-GM-RAW" if _is_gmail() else "TEXT")
     return data[0].split() if typ == "OK" and data and data[0] else []
 
 
+def _forwarded_from(msg) -> list[str]:
+    """Outlook 轉寄標頭裡的原始學校信箱地址（不是轉寄的信 → 空 list）。"""
+    found = []
+    for h in FORWARD_HEADERS:
+        for v in msg.get_all(h, []):
+            found += [a.lower() for a in EMAIL_RE.findall(str(v))]
+    return found
+
+
 def _school_of(msg) -> str | None:
+    """判斷這封信來自哪間學校：比對 MAIL_ACCOUNTS；沒設定但有轉寄標頭時，用原信箱網域當標籤。"""
     # 空字串要先濾掉：Python 3.13 的 getaddresses 遇到空欄位會整批回傳空結果
     fields = [str(v) for h in ("To", "Cc", "Delivered-To", "X-Forwarded-To") for v in msg.get_all(h, [])]
-    addrs = {a.lower() for _, a in getaddresses([f for f in fields if f.strip()])}
-    return next((s["label"] for s in schools() if s["address"] in addrs), None)
+    forwarded = _forwarded_from(msg)
+    addrs = {a.lower() for _, a in getaddresses([f for f in fields if f.strip()])} | set(forwarded)
+    for s in schools():
+        if any(_matches(a, s["address"]) for a in addrs):
+            return s["label"]
+    if forwarded:
+        return forwarded[0].rsplit("@", 1)[-1]
+    return None
 
 
 def _display_from(value: str) -> str:
@@ -145,9 +168,15 @@ def _parse_fetch(data) -> list[tuple[dict, bytes]]:
     return out
 
 
-def list_messages(top: int = 40, q: str | None = None, school: str | None = None) -> list[dict]:
+def list_messages(top: int = 40, q: str | None = None, school: str | None = None,
+                  only_school: bool = False) -> list[dict]:
+    """school：只看某間學校；only_school：只看任何學校轉寄過來的信。
+
+    Gmail 搜尋無法查 Outlook 轉寄標頭，所以篩選時先抓最近 SCAN_LIMIT 封的標頭，在本機判斷。
+    """
+    filtering = bool(school or only_school)
     with _connect() as conn:
-        uids = _search(conn, q, school)[-top:][::-1]
+        uids = _search(conn, q)[-(SCAN_LIMIT if filtering else top):][::-1]
         if not uids:
             return []
         extra = " X-GM-MSGID" if _is_gmail() else ""
@@ -157,6 +186,9 @@ def list_messages(top: int = 40, q: str | None = None, school: str | None = None
     msgs = []
     for meta, raw in _parse_fetch(data):
         m = email.message_from_bytes(raw, policy=default_policy)
+        label = _school_of(m)
+        if (school and label != school) or (only_school and not label):
+            continue
         msgs.append({
             "id": meta["uid"],
             "subject": str(m.get("Subject", "")).strip() or "(無主旨)",
@@ -165,11 +197,11 @@ def list_messages(top: int = 40, q: str | None = None, school: str | None = None
             "is_read": "\\Seen" in meta["flags"],
             "important": "\\Flagged" in meta["flags"],
             "has_attachments": m.get_content_type() == "multipart/mixed",
-            "school": _school_of(m),
+            "school": label,
             "web_link": _gmail_link(meta["msgid"]),
         })
     msgs.sort(key=lambda x: x["received"] or "", reverse=True)
-    return msgs
+    return msgs[:top]
 
 
 def get_message(uid: str) -> dict:
