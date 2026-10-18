@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=6">
-  <link rel="stylesheet" href="/static/views.css?v=6">
+  <link rel="stylesheet" href="/static/style.css?v=7">
+  <link rel="stylesheet" href="/static/views.css?v=7">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -92,6 +92,14 @@
                 <button class="link-btn" id="focus-manual">手動補記時數</button>
               </div>
             </div>
+          </section>
+
+          <section class="panel reveal" id="card-inbox">
+            <div class="panel-head">
+              <h2 class="bt">Inbox <span class="eyebrow">Captures</span></h2>
+              <span class="muted small" id="inbox-count"></span>
+            </div>
+            <div id="inbox-body" class="scroll"></div>
           </section>
 
           <section class="panel reveal" id="card-mail">
@@ -218,13 +226,13 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=6"></script>
-  <script src="/static/js/charts.js?v=6"></script>
-  <script src="/static/js/today.js?v=6"></script>
-  <script src="/static/js/calendar.js?v=6"></script>
-  <script src="/static/js/mail.js?v=6"></script>
-  <script src="/static/js/notes.js?v=6"></script>
-  <script src="/static/js/records.js?v=6"></script>
-  <script src="/static/fx.js?v=6"></script>
+  <script src="/static/js/core.js?v=7"></script>
+  <script src="/static/js/charts.js?v=7"></script>
+  <script src="/static/js/today.js?v=7"></script>
+  <script src="/static/js/calendar.js?v=7"></script>
+  <script src="/static/js/mail.js?v=7"></script>
+  <script src="/static/js/notes.js?v=7"></script>
+  <script src="/static/js/records.js?v=7"></script>
+  <script src="/static/fx.js?v=7"></script>
 </body>
 </html>

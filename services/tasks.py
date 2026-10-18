@@ -401,16 +401,8 @@ def update_task(task_id: str, text: str | None = None, done: bool | None = None,
 def delete_task(task_id: str) -> dict:
     """移到 vault 的 .trash（Obsidian 的垃圾桶），可以在 Obsidian 還原。"""
     with _lock:
-        _, p, _, _ = _load(task_id)
-        trash = vault.safe_path(".trash")
-        trash.mkdir(exist_ok=True)
-        target = trash / p.name
-        i = 1
-        while target.exists():
-            target = trash / f"{p.stem} {i}{p.suffix}"
-            i += 1
-        p.rename(target)
-    return {"ok": True}
+        _load(task_id)  # 確認真的是待辦
+        return vault.trash_note(task_id)
 
 
 def due_between(start: date, end: date) -> list[dict]:

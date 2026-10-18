@@ -146,6 +146,69 @@ Nova.views.today = (() => {
       });
   }
 
+  // ---------- Inbox（快速記錄 → 轉成待辦 / 刪除） ----------
+  let captures = [];
+
+  async function loadInbox() {
+    const body = $("#inbox-body");
+    try {
+      captures = await api("/api/inbox?days=7");
+      $("#inbox-count").textContent = captures.length ? `${captures.length} 筆待整理` : "";
+      if (!captures.length) {
+        body.innerHTML = `<p class="muted small">最近 7 天的快速記錄都整理完了 ✦<br>在最上方輸入框隨手記下想法，會出現在這裡。</p>`;
+        return;
+      }
+      const today = todayISO(), yday = isoDate(addDays(new Date(), -1));
+      let html = "", last = "";
+      for (const c of captures) {
+        if (c.date !== last) {
+          last = c.date;
+          html += `<div class="cap-day">${c.date === today ? "今天" : c.date === yday ? "昨天" : fmtDay(c.date)}</div>`;
+        }
+        html += `<div class="capture-item" data-id="${esc(c.id)}">
+          <span class="cap-time">${esc(c.time)}</span>
+          <span class="cap-text">${esc(c.text)}</span>
+          <span class="cap-btns">
+            <button class="to-task" title="轉成 TaskNotes 待辦">→ 待辦</button>
+            <button class="cap-del" title="刪除這筆記錄">✕</button>
+          </span></div>`;
+      }
+      body.innerHTML = html;
+    } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
+  }
+
+  function initInbox() {
+    $("#inbox-body").addEventListener("click", (e) => {
+      const row = e.target.closest(".capture-item");
+      if (!row) return;
+      const c = captures.find((x) => x.id === row.dataset.id);
+      if (!c) return;
+      if (e.target.closest(".to-task")) {
+        const opts = taskMeta.priorities.map((p) => `<option value="${esc(p.value)}"${p.value === "normal" ? " selected" : ""}>${esc(p.label)}</option>`).join("");
+        dialog(`<h3>轉成待辦</h3>
+          <label>標題（可加 #標籤）<input name="text" required value="${esc(c.text)}"></label>
+          <div class="dlg-row">
+            <label>截止日<input name="due" type="date"></label>
+            <label>優先度<select name="priority">${opts}</select></label>
+          </div>
+          <p class="muted small">原本的記錄會保留，並標記「已轉成待辦」連到新待辦。</p>`,
+          async (fd) => {
+            await api("/api/inbox/convert", { method: "POST", body: { id: c.id, text: fd.get("text"), due: fd.get("due") || null, priority: fd.get("priority") } });
+            toast("已轉成待辦 ✓");
+            loadInbox(); loadTasks();
+          });
+      } else if (e.target.closest(".cap-del")) {
+        dialog(`<h3>刪除這筆記錄？</h3><p class="muted">「${esc(c.text)}」</p><p class="muted small">會從 ${esc(c.path)} 移除這一行。</p>`,
+          async () => {
+            await api("/api/inbox/delete", { method: "POST", body: { id: c.id } });
+            toast("已刪除");
+            loadInbox();
+          });
+      }
+    });
+    on("vault-changed", () => Nova.current === "today" && loadInbox());
+  }
+
   // ---------- 心情 / 習慣 ----------
   function renderCheckin() {
     $("#mood-row").innerHTML = MOODS.map((m, i) =>
@@ -301,7 +364,7 @@ Nova.views.today = (() => {
 
   return {
     init() {
-      initTasks(); initCheckin(); initFocus(); initDiary();
+      initTasks(); initInbox(); initCheckin(); initFocus(); initDiary();
       $("#today-mail").addEventListener("click", (e) => {
         const item = e.target.closest(".mail-item");
         if (item) { go("mail"); Nova.views.mail.open(item.dataset.id); }
@@ -309,7 +372,7 @@ Nova.views.today = (() => {
       on("settings-changed", loadDay);
     },
     show() {
-      loadSchedule(); loadTasks(); loadMail();
+      loadSchedule(); loadTasks(); loadInbox(); loadMail();
       loadDay().catch((e) => toast(e.message));
     },
   };

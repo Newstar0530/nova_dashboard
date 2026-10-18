@@ -35,13 +35,14 @@
 
 /* ============ 今天 ============ */
 .today-grid {
-  height: 100%; min-height: 620px;
+  height: 100%; min-height: 760px;
   display: grid; gap: 16px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     "sched tasks checkin"
     "sched tasks focus"
+    "inbox tasks diary"
     "mail  tasks diary";
 }
 #card-schedule { grid-area: sched; }
@@ -50,6 +51,7 @@
 #card-focus { grid-area: focus; }
 #card-mail { grid-area: mail; }
 #card-diary { grid-area: diary; }
+#card-inbox { grid-area: inbox; }
 
 .sub-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 6px 0 8px; }
 
@@ -261,9 +263,9 @@
   .today-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: none; height: auto;
-    grid-template-areas: "sched tasks" "checkin tasks" "focus tasks" "mail diary";
+    grid-template-areas: "sched tasks" "checkin tasks" "focus tasks" "inbox diary" "mail diary";
   }
-  #card-schedule, #card-mail { max-height: 360px; }
+  #card-schedule, #card-mail, #card-inbox { max-height: 360px; }
   #card-tasks { max-height: 720px; }
   .notes-layout { grid-template-columns: 280px minmax(0, 1fr); }
   #panel-notion { grid-column: 1 / -1; }
@@ -282,7 +284,7 @@
   .sidenav a.active::before { left: 25%; right: 25%; top: -7px; bottom: auto; width: auto; height: 3px; }
   .view { height: auto; overflow: visible; padding: 12px 16px; }
   .today-grid, .cal-layout, .split, .notes-layout, .records-grid { display: flex; flex-direction: column; height: auto; min-height: 0; }
-  #card-schedule, #card-mail, #card-tasks { max-height: 460px; }
+  #card-schedule, #card-mail, #card-tasks, #card-inbox { max-height: 460px; }
   #card-diary { min-height: 220px; }
   .cal-grid { min-height: 420px; }
   .cal-ev, .cal-task { font-size: 10px; padding: 0 3px; }
@@ -328,3 +330,24 @@
 #task-form #task-text { flex: 1 1 100%; }
 #task-form #task-due { flex: 1 1 auto; width: auto; }
 #task-form .small-btn { margin-left: auto; }
+
+/* ============ Inbox 卡片 ============ */
+.capture-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 7px 8px; border-radius: 10px;
+  transition: background .2s;
+}
+.capture-item:hover { background: var(--surface-2); }
+.capture-item .cap-time { flex: none; font: 11px/1.9 var(--mono); color: var(--muted); width: 44px; }
+.capture-item .cap-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.capture-item .cap-btns { flex: none; display: flex; gap: 4px; opacity: .35; transition: opacity .2s; }
+.capture-item:hover .cap-btns { opacity: 1; }
+.cap-btns button {
+  border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px;
+  padding: 1px 9px; font-size: 11.5px; color: var(--ink-2); transition: border-color .2s, color .2s;
+}
+.cap-btns .to-task:hover { border-color: var(--tiffany); color: var(--tiffany); }
+.cap-btns .cap-del:hover { border-color: #e0848f; color: #e0848f; }
+.cap-day { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 10px 4px 2px; }
+.cap-day:first-child { margin-top: 0; }
+@media (hover: none) { .capture-item .cap-btns { opacity: 1; } }
+.danger:hover { border-color: #e0848f !important; color: #e0848f !important; box-shadow: 0 0 18px -6px #e0848f !important; }

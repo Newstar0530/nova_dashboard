@@ -161,6 +161,20 @@ def write_note(rel_path: str, content: str) -> Path:
     return p
 
 
+def trash_note(rel_path: str) -> dict:
+    """把筆記移到 vault 的 .trash（Obsidian 的垃圾桶），可在 Obsidian 還原；不是真的刪除。"""
+    p = safe_path(rel_path)
+    if not p.is_file() or p.suffix != ".md":
+        raise ValueError("只能刪除 vault 裡的 Markdown 筆記")
+    if SKIP_DIRS.intersection(p.relative_to(config.VAULT_PATH).parts):
+        raise ValueError("不能刪除系統資料夾裡的檔案")
+    trash = config.VAULT_PATH / ".trash"
+    trash.mkdir(exist_ok=True)
+    target = unique_path(trash / p.name)
+    p.rename(target)
+    return {"ok": True, "trashed_as": rel(target)}
+
+
 def sanitize_filename(name: str) -> str:
     name = re.sub(r'[\\/:*?"<>|#^\[\]]', "-", name).strip(" .")
     return name[:120] or "未命名"

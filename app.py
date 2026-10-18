@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import calendar_feed, journal, mail, notion_sync, tasks, vault
+from services import calendar_feed, inbox, journal, mail, notion_sync, tasks, vault
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -72,6 +72,7 @@ async def _imap_error(_req, exc):
 
 
 @app.exception_handler(tasks.TaskNotFound)
+@app.exception_handler(inbox.CaptureNotFound)
 async def _task_missing(_req, exc):
     return JSONResponse({"detail": str(exc)}, status_code=404)
 
@@ -134,6 +135,35 @@ def vault_capture(body: Capture):
     if not body.text.strip():
         raise HTTPException(400, "內容不可空白")
     return vault.capture(body.text, body.title or None)
+
+
+@app.delete("/api/vault/note")
+def vault_delete(path: str):
+    return vault.trash_note(path)
+
+
+# ---------- Inbox（快速記錄） ----------
+
+class CaptureAction(BaseModel):
+    id: str
+    text: str | None = None
+    due: str | None = None
+    priority: str | None = None
+
+
+@app.get("/api/inbox")
+def inbox_list(days: int = 7):
+    return inbox.list_captures(max(1, min(days, 60)))
+
+
+@app.post("/api/inbox/convert")
+def inbox_convert(body: CaptureAction):
+    return inbox.convert(body.id, body.text or None, body.due or None, body.priority or None)
+
+
+@app.post("/api/inbox/delete")
+def inbox_delete(body: CaptureAction):
+    return inbox.delete(body.id)
 
 
 # ---------- Gmail ----------

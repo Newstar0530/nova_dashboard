@@ -14,7 +14,10 @@ Nova.views.notes = (() => {
       reader.innerHTML = `
         <div class="reader-head">
           <div><h1>${esc(n.name)}</h1><div class="muted small">${esc(n.path)}</div></div>
-          <div class="btns"><a class="ghost" href="${esc(n.obsidian_uri)}">在 Obsidian 開啟</a></div>
+          <div class="btns">
+            <a class="ghost" href="${esc(n.obsidian_uri)}">在 Obsidian 開啟</a>
+            <button class="ghost danger" data-act="delete">刪除</button>
+          </div>
         </div>
         <div class="reader-body">
           ${n.frontmatter ? `<div class="frontmatter">${esc(n.frontmatter.replace(/^---\n|---\n$/g, ""))}</div>` : ""}
@@ -23,8 +26,24 @@ Nova.views.notes = (() => {
       $$(".wikilink[data-path]", reader).forEach((a) =>
         a.addEventListener("click", (e) => { e.preventDefault(); openNote(a.dataset.path); }));
       $$(".markdown a[href^='http']", reader).forEach((a) => (a.target = "_blank"));
+      $("[data-act=delete]", reader).onclick = () => deleteNote(n);
       $$(".item", list()).forEach((i) => i.classList.toggle("active", i.dataset.path === n.path));
     } catch (e) { toast(e.message); }
+  }
+
+  function deleteNote(n) {
+    const synced = n.frontmatter.includes("notion_id:");
+    dialog(`<h3>刪除「${esc(n.name)}」？</h3>
+      <p class="muted small">會移到 Obsidian 的垃圾桶（<code>.trash</code> 資料夾），之後可以在 Obsidian 還原。</p>
+      ${synced ? `<p class="notice small">這是 Notion 同步的課堂筆記：只刪這裡的話，下次按「同步」會再被抓回來。要永久移除，請在 Notion 刪掉那一頁。</p>` : ""}`,
+      async () => {
+        await api(`/api/vault/note?path=${encodeURIComponent(n.path)}`, { method: "DELETE" });
+        toast(`已移到垃圾桶：${n.name}`);
+        activePath = null;
+        $("#note-reader").innerHTML = `<div class="empty"><div class="big">✦</div><p>從左邊選一篇筆記</p></div>`;
+        loadVault();
+        emit("vault-changed");
+      });
   }
 
   const noteItem = (n, sub = "") => `<button class="item${n.path === activePath ? " active" : ""}" data-path="${esc(n.path)}">

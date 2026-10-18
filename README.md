@@ -7,7 +7,8 @@
 - ✉ **郵件**：Gmail（學校信箱轉寄過來），可依學校篩選、用 Gmail 語法搜尋，可「加入待辦」或「存到知識庫」
 - ❖ **筆記**：瀏覽、搜尋、閱讀 Obsidian vault（支援 `[[雙向連結]]`），Notion 課堂筆記同步
 - ◔ **紀錄**：習慣熱度圖與連續天數、心情折線、各科學習時數、日記回顧
-- ✍️ **快速記錄**：上方輸入框 Enter → 附加到 `00 Inbox/今天.md`；Shift+Enter → 另存新筆記
+- ✍️ **快速記錄**：上方輸入框 Enter → 附加到 `00 Inbox/今天.md`；Shift+Enter → 另存新筆記。「今天」頁的 **Inbox** 卡片列出最近 7 天還沒整理的記錄，可一鍵「→ 待辦」或刪除
+- 🗑 **刪除筆記**：筆記頁閱讀區的「刪除」會把筆記移到 Obsidian 垃圾桶 `.trash`，可在 Obsidian 還原
 
 所有資料都存成 vault 裡的 Markdown，Obsidian 也能直接開、會跟著 vault 同步到其他電腦：
 
@@ -101,5 +102,6 @@ services/notion_sync.py Notion 資料庫 → Markdown
 services/tasks.py      待辦（讀寫 TaskNotes 外掛格式）
 services/calendar_feed.py ICS 行事曆訂閱（含重複行程）
 services/journal.py    每日紀錄：日記、心情、習慣、學習時數
+services/inbox.py      快速記錄整理：轉成待辦、刪除
 static/index.html      頁面骨架；static/js/ 每頁一支 JS；style.css 視覺 + views.css 版面
 ```
