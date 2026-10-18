@@ -87,6 +87,12 @@ def index():
     return FileResponse(STATIC / "index.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    # 有些瀏覽器不看 <link rel="icon">，直接要 /favicon.ico
+    return FileResponse(STATIC / "icons" / "favicon.png", media_type="image/png")
+
+
 # ---------- Obsidian ----------
 
 @app.get("/api/vault/info")
