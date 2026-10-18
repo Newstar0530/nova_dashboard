@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nova Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">✦</span> Nova</div>
+    <div class="greeting" id="greeting"></div>
+    <form id="capture" class="capture" autocomplete="off">
+      <input id="capture-text" placeholder="快速記錄到 Inbox…（Enter 送出，Shift+Enter 另存成新筆記）">
+      <button type="submit">記錄</button>
+    </form>
+  </header>
+
+  <main class="grid">
+    <!-- 左：Obsidian 知識庫 -->
+    <section class="panel" id="panel-vault">
+      <div class="panel-head">
+        <h2>📚 知識庫</h2>
+        <span class="muted small" id="vault-name"></span>
+      </div>
+      <input id="vault-search" class="search" placeholder="搜尋筆記…">
+      <div class="tabs">
+        <button class="tab active" data-tab="recent">最近</button>
+        <button class="tab" data-tab="tree">全部</button>
+      </div>
+      <div class="list scroll" id="vault-list"></div>
+    </section>
+
+    <!-- 中：閱讀區 -->
+    <section class="panel reader" id="reader">
+      <div class="empty">
+        <div class="big">✦</div>
+        <p>從左邊選一篇筆記，或從右邊選一封信</p>
+      </div>
+    </section>
+
+    <!-- 右：郵件 + Notion -->
+    <div class="side">
+      <section class="panel" id="panel-mail">
+        <div class="panel-head">
+          <h2>✉️ 郵件</h2>
+          <div class="actions">
+            <button class="icon" id="mail-refresh" title="重新整理">⟳</button>
+            <button class="icon" id="mail-logout" title="登出" hidden>⎋</button>
+          </div>
+        </div>
+        <div id="mail-body" class="scroll"></div>
+      </section>
+
+      <section class="panel" id="panel-notion">
+        <div class="panel-head">
+          <h2>📝 課堂筆記 <span class="muted small">Notion → Obsidian</span></h2>
+          <button class="small-btn" id="notion-sync">同步</button>
+        </div>
+        <div id="notion-body"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
