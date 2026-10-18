@@ -13,9 +13,14 @@
 
 | 資料 | 位置 | 格式 |
 | --- | --- | --- |
-| 待辦 | `30 待辦/待辦.md` | `- [ ] 內容 📅 2026-10-20`（相容 Obsidian Tasks 外掛） |
+| 待辦 | `TaskNotes/Tasks/標題.md` | **Obsidian TaskNotes 外掛**格式：一個待辦一篇筆記，`status`、`priority`、`due`、`scheduled` 等屬性 |
 | 每日紀錄 | `40 紀錄/日記/YYYY-MM-DD.md` | frontmatter：`mood`、`habits`、`study`（Dataview 可查） |
 | 習慣 / 科目清單 | `40 紀錄/設定.md` | 可在「紀錄」頁按「編輯項目」修改 |
+
+待辦直接讀 vault 裡 TaskNotes 的設定（`.obsidian/plugins/tasknotes/data.json`：任務資料夾、識別標籤、欄位名稱、
+狀態與優先度），所以在 Obsidian 改 TaskNotes 設定，工作台會自動跟上。在工作台新增的待辦會出現在 TaskNotes 的
+看板 / 行事曆檢視，反之亦然；點待辦旁的 ↗ 可在 Obsidian 打開，寫作業說明等細節。重複待辦勾選時只完成「今天這一次」
+（寫進 `complete_instances`），刪除的待辦會移到 Obsidian 垃圾桶 `.trash`。
 
 資料只在你的電腦上：伺服器只聽 `127.0.0.1`，密碼與 token 只存在本機 `.env`（已 gitignore）。
 
@@ -93,7 +98,7 @@ config.py              讀取 .env
 services/vault.py      Obsidian vault 讀寫、搜尋、Markdown 渲染
 services/mail.py       Gmail 郵件（IMAP + 應用程式密碼）
 services/notion_sync.py Notion 資料庫 → Markdown
-services/tasks.py      待辦清單（Obsidian Tasks 格式）
+services/tasks.py      待辦（讀寫 TaskNotes 外掛格式）
 services/calendar_feed.py ICS 行事曆訂閱（含重複行程）
 services/journal.py    每日紀錄：日記、心情、習慣、學習時數
 static/index.html      頁面骨架；static/js/ 每頁一支 JS；style.css 視覺 + views.css 版面

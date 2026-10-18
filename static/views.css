@@ -303,3 +303,18 @@
   .focus { flex-direction: column; align-items: stretch; }
   .focus-ring { align-self: center; }
 }
+
+/* ============ TaskNotes 待辦 ============ */
+.prio-select { width: 92px; }
+.rec { color: var(--tiffany); font-size: 12px; }
+.tag.status { color: var(--c); border-color: color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 14%, transparent); }
+.open-obs {
+  flex: none; color: var(--muted); text-decoration: none; opacity: 0; padding: 2px 4px; border-radius: 6px;
+  transition: opacity .2s, color .2s;
+}
+.task:hover .open-obs { opacity: 1; }
+.open-obs:hover { color: var(--tiffany); }
+.task-text .tag { margin-left: 4px; }
+.dlg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dlg-form .link-btn { font-size: 12.5px; text-decoration: none; }
+@media (hover: none) { .open-obs, .del { opacity: .6; } }

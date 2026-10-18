@@ -1,4 +1,5 @@
 """行事曆：讀取 ICS 訂閱網址（Outlook「發佈行事曆」、Google 日曆私人網址等），含重複行程。"""
+import re
 import time
 from datetime import date, datetime, timedelta
 
@@ -13,13 +14,20 @@ _cache: dict[str, tuple[float, icalendar.Calendar]] = {}
 
 
 def sources() -> list[dict]:
-    """CALENDAR_ICS=NEOMA=https://...;清大=https://..."""
+    """CALENDAR_ICS=NEOMA=https://...;清大=https://...（也可以只填網址，標籤預設「行事曆」）"""
     out = []
     for item in config.CALENDAR_ICS.split(";"):
-        if "=" in item:
+        item = item.strip()
+        if not item:
+            continue
+        if re.match(r"^(https?|webcal)://", item, re.I):  # 只有網址（網址本身可能含 =，不能拿來切）
+            label, url = "行事曆", item
+        elif "=" in item:
             label, url = (s.strip() for s in item.split("=", 1))
-            if label and url:
-                out.append({"label": label, "url": "https://" + url[len("webcal://"):] if url.startswith("webcal://") else url})
+        else:
+            continue
+        if label and url:
+            out.append({"label": label, "url": "https://" + url[len("webcal://"):] if url.lower().startswith("webcal://") else url})
     return out
 
 

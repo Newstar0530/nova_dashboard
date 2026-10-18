@@ -178,6 +178,8 @@ def notion_sync_now(force: bool = False):
 class TaskIn(BaseModel):
     text: str
     due: str | None = None
+    priority: str | None = None
+    scheduled: str | None = None
 
 
 class TaskPatch(BaseModel):
@@ -185,6 +187,10 @@ class TaskPatch(BaseModel):
     done: bool | None = None
     due: str | None = None
     clear_due: bool = False
+    priority: str | None = None
+    status: str | None = None
+    scheduled: str | None = None
+    clear_scheduled: bool = False
 
 
 @app.get("/api/tasks")
@@ -192,17 +198,24 @@ def tasks_list(include_done: bool = False):
     return tasks.list_tasks(include_done)
 
 
+@app.get("/api/tasks/meta")
+def tasks_meta():
+    return tasks.meta()
+
+
 @app.post("/api/tasks")
 def tasks_add(body: TaskIn):
-    return tasks.add_task(body.text, body.due or None)
+    return tasks.add_task(body.text, body.due or None, body.priority or None, body.scheduled or None)
 
 
-@app.patch("/api/tasks/{task_id}")
+# 待辦 id 是 vault 內的相對路徑（含 /），所以用 :path
+@app.patch("/api/tasks/{task_id:path}")
 def tasks_update(task_id: str, body: TaskPatch):
-    return tasks.update_task(task_id, body.text, body.done, body.due or None, body.clear_due)
+    return tasks.update_task(task_id, body.text, body.done, body.due or None, body.clear_due,
+                             body.priority or None, body.status or None, body.scheduled or None, body.clear_scheduled)
 
 
-@app.delete("/api/tasks/{task_id}")
+@app.delete("/api/tasks/{task_id:path}")
 def tasks_delete(task_id: str):
     return tasks.delete_task(task_id)
 

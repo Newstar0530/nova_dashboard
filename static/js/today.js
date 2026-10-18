@@ -31,42 +31,69 @@ Nova.views.today = (() => {
       <span class="tag">${esc(e.source)}</span></div>`;
   };
 
-  // ---------- 待辦 ----------
+  // ---------- 待辦（TaskNotes 格式：一個待辦 = 一篇筆記） ----------
+  let taskMeta = { statuses: [], priorities: [], installed: true };
+  const prioOf = (v) => taskMeta.priorities.find((p) => p.value === v);
+  const statusOf = (v) => taskMeta.statuses.find((s) => s.value === v);
+
   async function loadTasks() {
     const body = $("#tasks-body");
     try {
       const list = await api(`/api/tasks?include_done=${$("#tasks-show-done").checked}`);
       const today = todayISO();
+      const when = (t) => t.due || t.scheduled;
       const groups = [
         ["逾期", list.filter((t) => !t.done && t.due && t.due < today)],
-        ["今天", list.filter((t) => !t.done && t.due === today)],
-        ["接下來", list.filter((t) => !t.done && t.due && t.due > today)],
-        ["沒有日期", list.filter((t) => !t.done && !t.due)],
+        ["今天", list.filter((t) => !t.done && !(t.due && t.due < today) && when(t) && when(t) <= today)],
+        ["接下來", list.filter((t) => !t.done && when(t) > today)],
+        ["沒有日期", list.filter((t) => !t.done && !when(t))],
         ["已完成", list.filter((t) => t.done)],
       ].filter(([, ts]) => ts.length);
-      body.innerHTML = groups.length
-        ? groups.map(([label, ts]) => `<div class="task-group${label === "逾期" ? " overdue" : ""}">${label} <span>${ts.length}</span></div>` + ts.map(taskRow).join("")).join("")
-        : `<p class="muted small">沒有待辦，好好休息 ✦</p>`;
+      body.innerHTML = (taskMeta.installed ? "" : `<div class="notice">沒有偵測到 TaskNotes 外掛，使用預設設定（待辦存在 <code>TaskNotes/Tasks</code>）。</div>`) +
+        (groups.length
+          ? groups.map(([label, ts]) => `<div class="task-group${label === "逾期" ? " overdue" : ""}">${label} <span>${ts.length}</span></div>` + ts.map(taskRow).join("")).join("")
+          : `<p class="muted small">沒有待辦，好好休息 ✦</p>`);
       emit("tasks-changed");
     } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
   }
 
   const taskRow = (t) => {
-    const text = esc(t.text).replace(/(^|\s)#([^\s#]+)/g, '$1<span class="tag">#$2</span>');
+    const p = prioOf(t.priority), st = statusOf(t.status);
+    const tags = t.tags.map((g) => `<span class="tag">#${esc(g)}</span>`).join(" ");
+    let date = "";
+    if (t.due) date = `<span class="due${!t.done && t.due < todayISO() ? " late" : ""}" title="截止日">${dueLabel(t.due)}${t.due_time ? " " + t.due_time : ""}</span>`;
+    else if (t.recurring) date = `<span class="due" title="重複待辦（依 TaskNotes 的重複規則）">重複</span>`;
+    else if (t.scheduled) {
+      // 排程日只是「打算哪天做」，過了不算逾期，直接顯示日期
+      const label = t.scheduled < todayISO() ? fmtDay(t.scheduled).split("（")[0] : dueLabel(t.scheduled);
+      date = `<span class="due" title="排程日">⏱ ${label}</span>`;
+    }
     return `<div class="task${t.done ? " done" : ""}" data-id="${esc(t.id)}">
-      <button class="check" aria-label="${t.done ? "標為未完成" : "完成"}">${t.done ? "✓" : ""}</button>
-      <span class="task-text">${text}</span>
-      ${t.due ? `<span class="due${!t.done && t.due < todayISO() ? " late" : ""}">${dueLabel(t.due)}</span>` : ""}
-      <button class="del" title="刪除">✕</button></div>`;
+      <button class="check" aria-label="${t.done ? "標為未完成" : "完成"}" style="${p && !t.done ? `border-color:${p.color}` : ""}">${t.done ? "✓" : ""}</button>
+      <span class="task-text">${t.recurring ? '<span class="rec" title="重複待辦">↻</span> ' : ""}${esc(t.text)}
+        ${st && !st.isCompleted && t.status !== taskMeta.statuses[0]?.value ? `<span class="tag status" style="--c:${st.color}">${esc(st.label)}</span>` : ""}
+        ${tags}</span>
+      ${date}
+      <a class="open-obs" href="${esc(t.obsidian_uri)}" title="在 Obsidian 開啟（寫詳細內容）">↗</a>
+      <button class="del" title="移到 Obsidian 垃圾桶">✕</button></div>`;
   };
 
+  // 待辦 id 是 vault 內路徑：逐段編碼
+  const taskUrl = (id) => `/api/tasks/${id.split("/").map(encodeURIComponent).join("/")}`;
+
   function initTasks() {
+    api("/api/tasks/meta").then((m) => {
+      taskMeta = m;
+      $("#task-prio").innerHTML = m.priorities.map((p) => `<option value="${esc(p.value)}">${esc(p.label)}</option>`).join("");
+      $("#task-prio").value = m.priorities.find((p) => p.value === "normal")?.value || m.priorities[0]?.value || "";
+      loadTasks();
+    }).catch(() => {});
     $("#task-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = $("#task-text").value.trim();
       if (!text) return;
       try {
-        await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null } });
+        await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null, priority: $("#task-prio").value || null } });
         $("#task-text").value = ""; $("#task-due").value = "";
         loadTasks();
       } catch (err) { toast(err.message); }
@@ -74,15 +101,15 @@ Nova.views.today = (() => {
     $("#tasks-show-done").addEventListener("change", loadTasks);
     $("#tasks-body").addEventListener("click", async (e) => {
       const row = e.target.closest(".task");
-      if (!row) return;
-      const id = encodeURIComponent(row.dataset.id);
+      if (!row || e.target.closest(".open-obs")) return;
       try {
         if (e.target.closest(".check")) {
           row.classList.toggle("done");
-          await api(`/api/tasks/${id}`, { method: "PATCH", body: { done: row.classList.contains("done") } });
+          await api(taskUrl(row.dataset.id), { method: "PATCH", body: { done: row.classList.contains("done") } });
           if (row.classList.contains("done")) toast("完成 ✓");
         } else if (e.target.closest(".del")) {
-          await api(`/api/tasks/${id}`, { method: "DELETE" });
+          await api(taskUrl(row.dataset.id), { method: "DELETE" });
+          toast("已移到 Obsidian 垃圾桶（.trash）");
         } else if (e.target.closest(".task-text")) {
           return editTask(row.dataset.id);
         } else return;
@@ -94,12 +121,26 @@ Nova.views.today = (() => {
   async function editTask(id) {
     const t = (await api("/api/tasks?include_done=true")).find((x) => x.id === id);
     if (!t) return loadTasks();
+    const opts = (xs, cur) => xs.map((x) => `<option value="${esc(x.value)}"${x.value === cur ? " selected" : ""}>${esc(x.label)}</option>`).join("");
     dialog(`<h3>編輯待辦</h3>
-      <label>內容<input name="text" required value="${esc(t.text)}"></label>
-      <label>截止日<input name="due" type="date" value="${t.due || ""}"></label>`,
+      <label>標題<input name="text" required value="${esc(t.text)}"></label>
+      <div class="dlg-row">
+        <label>狀態<select name="status"${t.recurring ? " disabled" : ""}>${opts(taskMeta.statuses, t.status)}</select></label>
+        <label>優先度<select name="priority">${opts(taskMeta.priorities, t.priority)}</select></label>
+      </div>
+      <div class="dlg-row">
+        <label>截止日<input name="due" type="date" value="${t.due || ""}"></label>
+        <label>排程日<input name="scheduled" type="date" value="${t.scheduled || ""}"></label>
+      </div>
+      ${t.recurring ? `<p class="muted small">↻ 重複待辦：勾選只會完成今天這一次，重複規則請在 Obsidian 修改。</p>` : ""}
+      <a class="link-btn" href="${esc(t.obsidian_uri)}">↗ 在 Obsidian 開啟，寫作業說明、連結等詳細內容</a>`,
       async (fd) => {
-        const due = fd.get("due");
-        await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body: { text: fd.get("text"), due: due || null, clear_due: !due } });
+        const due = fd.get("due"), scheduled = fd.get("scheduled");
+        const body = { priority: fd.get("priority"), due: due || null, clear_due: !due, scheduled: scheduled || null, clear_scheduled: !scheduled };
+        if (fd.get("text") !== t.text) body.text = fd.get("text");
+        if (!t.recurring && fd.get("status") !== t.status) body.status = fd.get("status");
+        if (t.due_time && due === t.due) { delete body.due; delete body.clear_due; }  // 沒改日期就保留原本的時間
+        await api(taskUrl(id), { method: "PATCH", body });
         loadTasks();
       });
   }
