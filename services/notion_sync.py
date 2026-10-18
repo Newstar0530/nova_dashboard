@@ -14,7 +14,7 @@ from pathlib import Path
 import httpx
 
 import config
-from services import vault
+from services import links, vault
 
 API = "https://api.notion.com/v1"
 VERSION = "2022-06-28"
@@ -282,7 +282,7 @@ def _yaml(v) -> str:
     return json.dumps(str(v), ensure_ascii=False)
 
 
-FM_FIELD = re.compile(r"^(notion_id|last_edited|course):\s*(.+?)\s*$", re.M)
+FM_FIELD = re.compile(r"^(notion_id|last_edited|course|created):\s*(.+?)\s*$", re.M)
 
 
 def _scan_existing() -> dict:
@@ -308,7 +308,8 @@ def _scan_existing() -> dict:
                 "path": vault.rel(p),
                 "last_edited": fields.get("last_edited", ""),
                 "title": p.stem,
-                "course": fields.get("course", "未分類"),
+                "course": links.unlink(fields.get("course", "")) or "未分類",
+                "created": fields.get("created", ""),
             }
     return found
 
@@ -344,8 +345,10 @@ def sync(force: bool = False) -> dict:
                     meta = _page_meta(page)
                     folder = f"{config.CLASS_NOTES_DIR}/{vault.sanitize_filename(meta['course'])}"
                     target = f"{folder}/{vault.sanitize_filename(meta['title'])}.md"
-                    owner = next((k for k, v in state.items() if v["path"] == target), None)
-                    if prev and DUP_SUFFIX.sub("", prev["path"]) == target:
+                    # Windows / macOS 的檔名不分大小寫：「The …」和「the …」是同一個檔名
+                    same = lambda a, b: a.casefold() == b.casefold()
+                    owner = next((k for k, v in state.items() if same(v["path"], target)), None)
+                    if prev and same(DUP_SUFFIX.sub("", prev["path"]), target):
                         # 同名頁面：沿用原本的「(2)」編號，避免蓋掉另一頁
                         target = prev["path"]
                     elif owner not in (None, pid) or (owner is None and vault.safe_path(target).exists()):
@@ -360,14 +363,14 @@ def sync(force: bool = False) -> dict:
                         "---",
                         f"notion_id: {pid}",
                         f"notion_url: {page.get('url', '')}",
-                        f"course: {_yaml(meta['course'])}",
+                        f"course: {_yaml(links.link(meta['course']))}",  # 屬性連結 → 關係圖連到課程首頁
                         f"created: {page['created_time'][:10]}",
                         f"last_edited: {edited}",
                         f"synced: {datetime.now():%Y-%m-%d %H:%M}",
                     ]
                     fm += [f"{_yaml(k)[1:-1]}: {_yaml(v)}" for k, v in meta["props"].items()]
                     fm += ["tags: [課堂筆記]", "---", ""]
-                    note = "\n".join(fm) + f"\n# {meta['title']}\n\n> [!info] 由 Notion 同步，請在 Notion 編輯（本機修改會在下次同步時被覆蓋）\n\n{body}\n"
+                    note = "\n".join(fm) + f"\n# {meta['title']}\n\n> [!info] {links.link(meta['course'])}・由 Notion 同步，請在 Notion 編輯（本機修改會在下次同步時被覆蓋）\n\n{body}\n"
                     vault.write_note(target, note)
                     state[pid] = {"path": target, "last_edited": edited, "title": meta["title"], "course": meta["course"]}
                     _save_state(state)
@@ -375,6 +378,7 @@ def sync(force: bool = False) -> dict:
                 except Exception as e:  # 單頁失敗不影響其他頁
                     _progress["errors"].append(f"{pid}: {e}")
             _progress["message"] = f"完成：更新 {_progress['synced']} 頁，略過 {_progress['skipped']} 頁"
+        links.rebuild_course_hubs()  # 課程首頁跟著更新
     except httpx.HTTPStatusError as e:
         _progress["message"] = f"Notion API 錯誤 {e.response.status_code}：{e.response.text[:200]}"
     except Exception as e:

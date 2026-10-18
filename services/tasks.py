@@ -26,7 +26,7 @@ from urllib.parse import quote
 import yaml
 
 import config
-from services import vault
+from services import links, vault
 
 FM_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n?", re.S)
 TAG_RE = re.compile(r"(?<!\S)#([^\s#]+)")
@@ -134,6 +134,7 @@ def meta() -> dict:
         "folder": s["tasksFolder"],
         "statuses": pick(s["customStatuses"], ("value", "label", "color", "isCompleted")),
         "priorities": pick(s["customPriorities"], ("value", "label", "color", "weight")),
+        "courses": links.courses(),  # 待辦可以歸到哪門課（寫進 TaskNotes 的 projects）
     }
 
 
@@ -296,7 +297,8 @@ def _zettel() -> str:
     return n.strftime("%y%m%d") + digits
 
 
-def add_task(text: str, due: str | None = None, priority: str | None = None, scheduled: str | None = None) -> dict:
+def add_task(text: str, due: str | None = None, priority: str | None = None, scheduled: str | None = None,
+             project: str | None = None) -> dict:
     s = settings()
     f = s["fields"]
     text = text.replace("\n", " ").strip()
@@ -317,6 +319,8 @@ def add_task(text: str, due: str | None = None, priority: str | None = None, sch
         fm[f["due"]] = due
     if _check_date(scheduled):
         fm[f["scheduled"]] = scheduled
+    if project:
+        fm[f["projects"]] = [links.link(project)]  # 連到課程首頁
     fm[f["dateCreated"]] = now
     fm[f["dateModified"]] = now
     if s["taskIdentificationMethod"] == "property" and s.get("taskPropertyName"):
@@ -330,6 +334,8 @@ def add_task(text: str, due: str | None = None, priority: str | None = None, sch
         name = _safe_title(title) if s["storeTitleInFilename"] else _zettel()
         rel = _unique(folder, name)
         vault.write_note(rel, _dump(fm, ""))
+    if project:
+        links.rebuild_course_hubs()
     return {"ok": True, "id": rel}
 
 
@@ -346,12 +352,15 @@ def _load(task_id: str):
 
 def update_task(task_id: str, text: str | None = None, done: bool | None = None,
                 due: str | None = None, clear_due: bool = False, priority: str | None = None,
-                status: str | None = None, scheduled: str | None = None, clear_scheduled: bool = False) -> dict:
+                status: str | None = None, scheduled: str | None = None, clear_scheduled: bool = False,
+                project: str | None = None, clear_project: bool = False) -> dict:
     with _lock:
         s, p, fm, body = _load(task_id)
         f = s["fields"]
         today = date.today().isoformat()
         recurring = bool(fm.get(f["recurrence"]))
+        was_done = (today in _as_list(fm.get(f["completeInstances"]))) if recurring             else str(fm.get(f["status"])) in _completed_values(s)
+        had_project = bool(_as_list(fm.get(f["projects"])))
 
         if done is not None and recurring:
             # 重複待辦：完成「今天這一次」，記在 complete_instances（TaskNotes 的作法）
@@ -372,6 +381,10 @@ def update_task(task_id: str, text: str | None = None, done: bool | None = None,
                 fm.pop(f["completedDate"], None)
         if priority:
             fm[f["priority"]] = priority
+        if clear_project:
+            fm.pop(f["projects"], None)
+        elif project:
+            fm[f["projects"]] = [links.link(project)]
         if clear_due:
             fm.pop(f["due"], None)
         elif _check_date(due):
@@ -395,14 +408,24 @@ def update_task(task_id: str, text: str | None = None, done: bool | None = None,
         vault.write_note(new_id, _dump(fm, body))
         if new_id != task_id:
             p.unlink()
+        now_done = (today in _as_list(fm.get(f["completeInstances"]))) if recurring             else str(fm.get(f["status"])) in _completed_values(s)
+    title = new_id.rsplit("/", 1)[-1][:-3]
+    if now_done and not was_done:
+        from services import journal
+        journal.log_done(title)  # 今天的日記記一筆「完成的待辦」→ 連到待辦
+    if had_project or project or clear_project:
+        links.rebuild_course_hubs()
     return {"ok": True, "id": new_id}
 
 
 def delete_task(task_id: str) -> dict:
     """移到 vault 的 .trash（Obsidian 的垃圾桶），可以在 Obsidian 還原。"""
     with _lock:
-        _load(task_id)  # 確認真的是待辦
-        return vault.trash_note(task_id)
+        _, _, fm, _ = _load(task_id)  # 確認真的是待辦
+        result = vault.trash_note(task_id)
+    if _as_list(fm.get(settings()["fields"]["projects"])):
+        links.rebuild_course_hubs()
+    return result
 
 
 def due_between(start: date, end: date) -> list[dict]:

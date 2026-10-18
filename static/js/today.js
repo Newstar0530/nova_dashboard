@@ -32,7 +32,8 @@ Nova.views.today = (() => {
   };
 
   // ---------- 待辦（TaskNotes 格式：一個待辦 = 一篇筆記） ----------
-  let taskMeta = { statuses: [], priorities: [], installed: true };
+  let taskMeta = { statuses: [], priorities: [], courses: [], installed: true };
+  const courseOf = (t) => (t.projects || []).map((p) => p.replace(/^\[\[|\]\]$/g, "").split("|")[0])[0];
   const prioOf = (v) => taskMeta.priorities.find((p) => p.value === v);
   const statusOf = (v) => taskMeta.statuses.find((s) => s.value === v);
 
@@ -72,6 +73,7 @@ Nova.views.today = (() => {
       <button class="check" aria-label="${t.done ? "標為未完成" : "完成"}" style="${p && !t.done ? `border-color:${p.color}` : ""}">${t.done ? "✓" : ""}</button>
       <span class="task-text">${t.recurring ? '<span class="rec" title="重複待辦">↻</span> ' : ""}${esc(t.text)}
         ${st && !st.isCompleted && t.status !== taskMeta.statuses[0]?.value ? `<span class="tag status" style="--c:${st.color}">${esc(st.label)}</span>` : ""}
+        ${courseOf(t) ? `<span class="tag course-tag">${esc(courseOf(t))}</span>` : ""}
         ${tags}</span>
       ${date}
       <a class="open-obs" href="${esc(t.obsidian_uri)}" title="在 Obsidian 開啟（寫詳細內容）">↗</a>
@@ -86,6 +88,8 @@ Nova.views.today = (() => {
       taskMeta = m;
       $("#task-prio").innerHTML = m.priorities.map((p) => `<option value="${esc(p.value)}">${esc(p.label)}</option>`).join("");
       $("#task-prio").value = m.priorities.find((p) => p.value === "normal")?.value || m.priorities[0]?.value || "";
+      $("#task-course").innerHTML = `<option value="">不分課程</option>` + m.courses.map((c) => `<option>${esc(c)}</option>`).join("");
+      $("#task-course").hidden = !m.courses.length;
       loadTasks();
     }).catch(() => {});
     $("#task-form").addEventListener("submit", async (e) => {
@@ -93,7 +97,7 @@ Nova.views.today = (() => {
       const text = $("#task-text").value.trim();
       if (!text) return needInput($("#task-text"), "先輸入待辦內容");
       try {
-        await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null, priority: $("#task-prio").value || null } });
+        await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null, priority: $("#task-prio").value || null, project: $("#task-course").value || null } });
         $("#task-text").value = ""; $("#task-due").value = "";
         toast(`已新增待辦：${text}`);
         loadTasks();
@@ -129,6 +133,7 @@ Nova.views.today = (() => {
         <label>狀態<select name="status"${t.recurring ? " disabled" : ""}>${opts(taskMeta.statuses, t.status)}</select></label>
         <label>優先度<select name="priority">${opts(taskMeta.priorities, t.priority)}</select></label>
       </div>
+      ${taskMeta.courses.length ? `<label>課程（連到課程首頁）<select name="course"><option value="">不分課程</option>${taskMeta.courses.map((c) => `<option${c === courseOf(t) ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
       <div class="dlg-row">
         <label>截止日<input name="due" type="date" value="${t.due || ""}"></label>
         <label>排程日<input name="scheduled" type="date" value="${t.scheduled || ""}"></label>
@@ -139,6 +144,9 @@ Nova.views.today = (() => {
         const due = fd.get("due"), scheduled = fd.get("scheduled");
         const body = { priority: fd.get("priority"), due: due || null, clear_due: !due, scheduled: scheduled || null, clear_scheduled: !scheduled };
         if (fd.get("text") !== t.text) body.text = fd.get("text");
+        if (fd.has("course") && fd.get("course") !== (courseOf(t) || "")) {
+          if (fd.get("course")) body.project = fd.get("course"); else body.clear_project = true;
+        }
         if (!t.recurring && fd.get("status") !== t.status) body.status = fd.get("status");
         if (t.due_time && due === t.due) { delete body.due; delete body.clear_due; }  // 沒改日期就保留原本的時間
         await api(taskUrl(id), { method: "PATCH", body });

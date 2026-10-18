@@ -355,3 +355,7 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 .cap-day:first-child { margin-top: 0; }
 @media (hover: none) { .capture-item .cap-btns { opacity: 1; } }
 .danger:hover { border-color: #e0848f !important; color: #e0848f !important; box-shadow: 0 0 18px -6px #e0848f !important; }
+
+/* 課程（TaskNotes projects） */
+.course-select { flex: 1 1 auto; width: auto; max-width: 180px; }
+.tag.course-tag { color: var(--accent-3); border-color: rgba(122, 162, 255, .4); background: rgba(122, 162, 255, .1); }

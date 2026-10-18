@@ -10,6 +10,11 @@
 - ✍️ **快速記錄**：上方輸入框 Enter → 附加到 `00 Inbox/今天.md`；Shift+Enter → 另存新筆記。「今天」頁的 **Inbox** 卡片列出最近 7 天還沒整理的記錄，可一鍵「→ 待辦」或刪除
 - 🗑 **刪除筆記**：筆記頁閱讀區的「刪除」會把筆記移到 Obsidian 垃圾桶 `.trash`，可在 Obsidian 還原
 
+**筆記會自動連起來**（Obsidian 關係圖看得到）：
+- 每門課有一篇**課程首頁** `10 課堂筆記/<課程>/<課程>.md`，自動列出這門課的課堂筆記與待辦；`<!-- nova:auto -->` 區塊以外可以自己寫課程大綱等
+- 課堂筆記的 `course` 屬性連到課程首頁；新增待辦時可選課程（寫進 TaskNotes 的 `projects`）
+- 日記的學習紀錄連到課程，完成的待辦會記到當天日記的「完成的待辦」
+
 **版面可以自由調整**：今天、行事曆、郵件、筆記頁的框框之間都能拖曳調整大小（像調整視窗一樣），會記在瀏覽器裡；雙擊縫隙恢復預設。手機上自動改成上下排列。
 
 所有資料都存成 vault 裡的 Markdown，Obsidian 也能直接開、會跟著 vault 同步到其他電腦：
@@ -121,5 +126,6 @@ services/tasks.py      待辦（讀寫 TaskNotes 外掛格式）
 services/calendar_feed.py ICS 行事曆訂閱（含重複行程）
 services/journal.py    每日紀錄：日記、心情、習慣、學習時數
 services/inbox.py      快速記錄整理：轉成待辦、刪除
+services/links.py      自動連結：課程首頁
 static/index.html      頁面骨架；static/js/ 每頁一支 JS；style.css 視覺 + views.css 版面
 ```

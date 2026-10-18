@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import calendar_feed, inbox, journal, mail, notion_sync, tasks, vault
+from services import calendar_feed, inbox, journal, links, mail, notion_sync, tasks, vault
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -216,6 +216,7 @@ class TaskIn(BaseModel):
     due: str | None = None
     priority: str | None = None
     scheduled: str | None = None
+    project: str | None = None
 
 
 class TaskPatch(BaseModel):
@@ -227,6 +228,8 @@ class TaskPatch(BaseModel):
     status: str | None = None
     scheduled: str | None = None
     clear_scheduled: bool = False
+    project: str | None = None
+    clear_project: bool = False
 
 
 @app.get("/api/tasks")
@@ -241,19 +244,25 @@ def tasks_meta():
 
 @app.post("/api/tasks")
 def tasks_add(body: TaskIn):
-    return tasks.add_task(body.text, body.due or None, body.priority or None, body.scheduled or None)
+    return tasks.add_task(body.text, body.due or None, body.priority or None, body.scheduled or None, body.project or None)
 
 
 # 待辦 id 是 vault 內的相對路徑（含 /），所以用 :path
 @app.patch("/api/tasks/{task_id:path}")
 def tasks_update(task_id: str, body: TaskPatch):
     return tasks.update_task(task_id, body.text, body.done, body.due or None, body.clear_due,
-                             body.priority or None, body.status or None, body.scheduled or None, body.clear_scheduled)
+                             body.priority or None, body.status or None, body.scheduled or None, body.clear_scheduled,
+                             body.project or None, body.clear_project)
 
 
 @app.delete("/api/tasks/{task_id:path}")
 def tasks_delete(task_id: str):
     return tasks.delete_task(task_id)
+
+
+@app.post("/api/links/rebuild")
+def links_rebuild():
+    return links.rebuild_course_hubs()
 
 
 # ---------- 行事曆 ----------

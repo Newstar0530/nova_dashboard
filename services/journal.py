@@ -214,10 +214,27 @@ def add_study(d: date, subject: str, minutes: int, start: str | None = None, not
         fm["study"] = study
         log = _get_section(body, "學習紀錄")
         when = start or datetime.now().strftime("%H:%M")
-        line = f"- {when} {subject} {minutes} 分鐘" + (f"：{note.strip()}" if note.strip() else "")
+        from services import links
+        # 科目是 Notion 課程就寫成連結 → 日記連到課程首頁
+        label = links.link(subject) if subject in links.courses() else subject
+        line = f"- {when} {label} {minutes} 分鐘" + (f"：{note.strip()}" if note.strip() else "")
         body = _set_section(body, "學習紀錄", "\n" + (log + "\n" if log else "") + line + "\n")
         _save(d, fm, body)
     return get_day(d)
+
+
+def log_done(task_title: str, d: date | None = None) -> None:
+    """待辦完成時，在當天日記的「完成的待辦」記一筆連結（同一項當天只記一次）。"""
+    d = d or date.today()
+    entry = f"[[{task_title}]]"
+    with _lock:
+        fm, body, _ = _load(d)
+        done = _get_section(body, "完成的待辦")
+        if entry in done:
+            return
+        line = f"- {datetime.now().strftime('%H:%M')} {entry}"
+        body = _set_section(body, "完成的待辦", "\n" + (done + "\n" if done else "") + line + "\n")
+        _save(d, fm, body)
 
 
 # ---------- 統計 ----------
