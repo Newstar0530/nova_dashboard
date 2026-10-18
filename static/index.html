@@ -7,7 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/views.css?v=4">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -26,56 +27,203 @@
     </form>
   </header>
 
-  <main class="grid">
-    <!-- 左：Obsidian 知識庫 -->
-    <section class="panel reveal" id="panel-vault">
-      <div class="panel-head">
-        <h2 class="bt">知識庫 <span class="eyebrow">Vault</span></h2>
-        <span class="muted small" id="vault-name"></span>
-      </div>
-      <input id="vault-search" class="search" placeholder="搜尋筆記…">
-      <div class="tabs">
-        <button class="tab active" data-tab="recent">最近</button>
-        <button class="tab" data-tab="tree">全部</button>
-      </div>
-      <div class="list scroll" id="vault-list"></div>
-    </section>
+  <div class="shell">
+    <nav class="sidenav" aria-label="主選單">
+      <a href="#today" data-view="today"><span class="nav-ic">◐</span><span>今天</span></a>
+      <a href="#calendar" data-view="calendar"><span class="nav-ic">▦</span><span>行事曆</span></a>
+      <a href="#mail" data-view="mail"><span class="nav-ic">✉</span><span>郵件</span><span class="nav-badge" id="mail-badge" hidden></span></a>
+      <a href="#notes" data-view="notes"><span class="nav-ic">❖</span><span>筆記</span></a>
+      <a href="#records" data-view="records"><span class="nav-ic">◔</span><span>紀錄</span></a>
+    </nav>
 
-    <!-- 中：閱讀區 -->
-    <section class="panel reader reveal" id="reader">
-      <div class="empty">
-        <div class="big">✦</div>
-        <p>從左邊選一篇筆記，或從右邊選一封信</p>
-      </div>
-    </section>
+    <main class="views">
+      <!-- ================= 今天 ================= -->
+      <section class="view" data-view="today">
+        <div class="today-grid">
+          <section class="panel reveal" id="card-schedule">
+            <div class="panel-head">
+              <h2 class="bt">今日行程 <span class="eyebrow">Schedule</span></h2>
+              <a class="ghost" href="#calendar">行事曆 →</a>
+            </div>
+            <div id="schedule-body" class="scroll"></div>
+          </section>
 
-    <!-- 右：郵件 + Notion -->
-    <div class="side">
-      <section class="panel reveal" id="panel-mail">
-        <div class="panel-head">
-          <h2 class="bt">郵件 <span class="eyebrow">Mail</span></h2>
-          <div class="actions">
-            <button class="icon" id="mail-refresh" title="重新整理">⟳</button>
-          </div>
+          <section class="panel reveal" id="card-tasks">
+            <div class="panel-head">
+              <h2 class="bt">待辦 <span class="eyebrow">To-do</span></h2>
+              <label class="toggle small"><input type="checkbox" id="tasks-show-done"> 顯示已完成</label>
+            </div>
+            <form id="task-form" class="task-form" autocomplete="off">
+              <input id="task-text" class="search" placeholder="新增待辦…（可加 #標籤）">
+              <input id="task-due" type="date" class="date-input" title="截止日">
+              <button class="small-btn" type="submit">新增</button>
+            </form>
+            <div id="tasks-body" class="scroll"></div>
+          </section>
+
+          <section class="panel reveal" id="card-checkin">
+            <div class="panel-head">
+              <h2 class="bt">今日打卡 <span class="eyebrow">Check-in</span></h2>
+              <a class="ghost" href="#records">紀錄 →</a>
+            </div>
+            <div class="sub-label">心情</div>
+            <div class="mood-row" id="mood-row"></div>
+            <div class="sub-label">習慣</div>
+            <div class="habit-row" id="habit-row"></div>
+          </section>
+
+          <section class="panel reveal" id="card-focus">
+            <div class="panel-head">
+              <h2 class="bt">專注計時 <span class="eyebrow">Focus</span></h2>
+              <span class="muted small" id="focus-today"></span>
+            </div>
+            <div class="focus">
+              <div class="focus-ring" id="focus-ring"><span id="focus-time">25:00</span></div>
+              <div class="focus-side">
+                <select id="focus-subject" class="select"></select>
+                <div class="seg" id="focus-len">
+                  <button data-min="25" class="on">25</button><button data-min="50">50</button><button data-min="90">90</button>
+                </div>
+                <div class="focus-btns">
+                  <button class="small-btn" id="focus-start">開始</button>
+                  <button class="ghost" id="focus-stop" hidden>結束並記錄</button>
+                </div>
+                <button class="link-btn" id="focus-manual">手動補記時數</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel reveal" id="card-mail">
+            <div class="panel-head">
+              <h2 class="bt">學校信件 <span class="eyebrow">Mail</span></h2>
+              <a class="ghost" href="#mail">全部 →</a>
+            </div>
+            <div id="today-mail" class="scroll"></div>
+          </section>
+
+          <section class="panel reveal" id="card-diary">
+            <div class="panel-head">
+              <h2 class="bt">今日日記 <span class="eyebrow">Journal</span></h2>
+              <span class="muted small" id="diary-status"></span>
+            </div>
+            <textarea id="diary-text" class="diary" placeholder="今天發生了什麼？（自動儲存到 40 紀錄/日記）"></textarea>
+          </section>
         </div>
-        <div id="mail-tools" hidden>
-          <input id="mail-search" class="search" placeholder="搜尋郵件（支援 Gmail 語法，如 from:教授 has:attachment）">
-          <div class="courses" id="mail-schools"></div>
-        </div>
-        <div id="mail-body" class="scroll"></div>
       </section>
 
-      <section class="panel reveal" id="panel-notion">
-        <div class="panel-head">
-          <h2 class="bt">課堂筆記 <span class="eyebrow">Notion → Obsidian</span></h2>
-          <button class="small-btn" id="notion-sync">同步</button>
+      <!-- ================= 行事曆 ================= -->
+      <section class="view" data-view="calendar">
+        <div class="cal-layout">
+          <section class="panel reveal" id="cal-panel">
+            <div class="panel-head">
+              <h2><span id="cal-title"></span> <span class="eyebrow">Calendar</span></h2>
+              <div class="actions">
+                <button class="ghost" id="cal-prev" title="上個月">‹</button>
+                <button class="ghost" id="cal-today">今天</button>
+                <button class="ghost" id="cal-next" title="下個月">›</button>
+                <button class="icon" id="cal-refresh" title="重新抓取行事曆">⟳</button>
+              </div>
+            </div>
+            <div id="cal-notice"></div>
+            <div class="cal-grid" id="cal-grid"></div>
+          </section>
+          <section class="panel reveal" id="cal-day">
+            <div class="panel-head"><h2 id="cal-day-title"></h2></div>
+            <div id="cal-day-body" class="scroll"></div>
+          </section>
         </div>
-        <div id="notion-body"></div>
       </section>
-    </div>
-  </main>
 
-  <script src="/static/app.js?v=3"></script>
-  <script src="/static/fx.js?v=3"></script>
+      <!-- ================= 郵件 ================= -->
+      <section class="view" data-view="mail">
+        <div class="split">
+          <section class="panel reveal" id="panel-mail">
+            <div class="panel-head">
+              <h2 class="bt">郵件 <span class="eyebrow">Mail</span></h2>
+              <div class="actions"><button class="icon" id="mail-refresh" title="重新整理">⟳</button></div>
+            </div>
+            <div id="mail-tools" hidden>
+              <input id="mail-search" class="search" placeholder="搜尋郵件（支援 Gmail 語法，如 from:教授 has:attachment）">
+              <div class="courses" id="mail-schools"></div>
+            </div>
+            <div id="mail-body" class="scroll"></div>
+          </section>
+          <section class="panel reader reveal" id="mail-reader">
+            <div class="empty"><div class="big">✉</div><p>選一封信來閱讀</p></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ================= 筆記 ================= -->
+      <section class="view" data-view="notes">
+        <div class="notes-layout">
+          <section class="panel reveal" id="panel-vault">
+            <div class="panel-head">
+              <h2 class="bt">知識庫 <span class="eyebrow">Vault</span></h2>
+              <span class="muted small" id="vault-name"></span>
+            </div>
+            <input id="vault-search" class="search" placeholder="搜尋筆記…">
+            <div class="tabs">
+              <button class="tab active" data-tab="recent">最近</button>
+              <button class="tab" data-tab="tree">全部</button>
+            </div>
+            <div class="list scroll" id="vault-list"></div>
+          </section>
+          <section class="panel reader reveal" id="note-reader">
+            <div class="empty"><div class="big">✦</div><p>從左邊選一篇筆記</p></div>
+          </section>
+          <section class="panel reveal" id="panel-notion">
+            <div class="panel-head">
+              <h2 class="bt">課堂筆記 <span class="eyebrow">Notion</span></h2>
+              <button class="small-btn" id="notion-sync">同步</button>
+            </div>
+            <div id="notion-body"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ================= 紀錄 ================= -->
+      <section class="view" data-view="records">
+        <div class="records-grid">
+          <section class="panel reveal" id="rec-habits">
+            <div class="panel-head">
+              <h2 class="bt">習慣 <span class="eyebrow">Last 12 weeks</span></h2>
+              <button class="ghost" id="rec-settings-btn">編輯項目</button>
+            </div>
+            <div id="habit-heatmaps" class="scroll"></div>
+          </section>
+          <section class="panel reveal" id="rec-mood">
+            <div class="panel-head"><h2 class="bt">心情 <span class="eyebrow">Last 30 days</span></h2></div>
+            <div class="chart" id="mood-chart"></div>
+          </section>
+          <section class="panel reveal" id="rec-study">
+            <div class="panel-head">
+              <h2 class="bt">學習時數 <span class="eyebrow">Last 14 days</span></h2>
+              <span class="muted small" id="study-total"></span>
+            </div>
+            <div class="chart" id="study-chart"></div>
+          </section>
+          <section class="panel reveal" id="rec-diary">
+            <div class="panel-head">
+              <h2 class="bt">日記 <span class="eyebrow">Journal</span></h2>
+              <input type="date" id="diary-date" class="date-input">
+            </div>
+            <div id="diary-view" class="scroll"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="dlg" class="dlg"></dialog>
+
+  <script src="/static/js/core.js?v=4"></script>
+  <script src="/static/js/charts.js?v=4"></script>
+  <script src="/static/js/today.js?v=4"></script>
+  <script src="/static/js/calendar.js?v=4"></script>
+  <script src="/static/js/mail.js?v=4"></script>
+  <script src="/static/js/notes.js?v=4"></script>
+  <script src="/static/js/records.js?v=4"></script>
+  <script src="/static/fx.js?v=4"></script>
 </body>
 </html>

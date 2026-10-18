@@ -12,6 +12,11 @@ VAULT_PATH = Path(os.getenv("VAULT_PATH", BASE_DIR.parent / "知識庫")).resolv
 INBOX_DIR = os.getenv("INBOX_DIR", "00 Inbox")
 CLASS_NOTES_DIR = os.getenv("CLASS_NOTES_DIR", "10 課堂筆記")
 ATTACHMENTS_DIR = os.getenv("ATTACHMENTS_DIR", "90 附件")
+TASKS_FILE = os.getenv("TASKS_FILE", "30 待辦/待辦.md")
+RECORDS_DIR = os.getenv("RECORDS_DIR", "40 紀錄")  # 每日筆記（日記、心情、打卡、學習時數）
+
+# 行事曆訂閱（ICS 網址）：標籤=網址，用分號分隔
+CALENDAR_ICS = os.getenv("CALENDAR_ICS", "").strip()
 
 # Gmail（IMAP + 應用程式密碼）
 GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "").strip()

@@ -186,16 +186,7 @@ body.pointer-in .cursor-glow { opacity: 1; }
 }
 .icon:hover { border-color: var(--line-strong); color: var(--tiffany); background: var(--surface); transform: rotate(180deg); }
 
-/* ============ 版面 ============ */
-.grid {
-  position: relative; z-index: 1;
-  flex: 1; min-height: 0;
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 380px;
-  gap: 16px; padding: 16px;
-}
-.side { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
-
+/* ============ 卡片（版面配置在 views.css） ============ */
 /* 玻璃卡片 + 游標聚光 + 跟隨游標的發光邊框 */
 .panel {
   position: relative; isolation: isolate;
@@ -223,7 +214,6 @@ body.pointer-in .cursor-glow { opacity: 1; }
 }
 .panel:hover { border-color: rgba(139, 92, 246, .3); box-shadow: 0 30px 60px -40px rgba(0, 0, 0, .9), 0 0 40px -22px rgba(109, 90, 240, .55); }
 .panel:hover::before, .panel:hover::after { opacity: 1; }
-#panel-mail { flex: 1; }
 
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .panel-head h2 {
@@ -441,34 +431,7 @@ body.has-ring .cursor-ring, body.has-ring .cursor-dot { opacity: 1; }
   background: var(--tiffany); box-shadow: 0 0 8px var(--tiffany);
 }
 
-/* ============ RWD ============ */
-/* 窄螢幕：整頁往下捲，卡片給固定高度（不再擠在一個螢幕內） */
-@media (max-width: 1100px) {
-  html, body { height: auto; }
-  body { overflow: visible; min-height: 100vh; }
-  .topbar { position: sticky; top: 0; }
-  .grid { flex: none; grid-template-columns: 260px minmax(0, 1fr); }
-  #panel-vault { height: 620px; }
-  .reader { height: 620px; }
-  .side { grid-column: 1 / -1; flex-direction: row; min-width: 0; }
-  .side .panel { flex: 1 1 0; min-width: 0; height: 480px; }
-  #panel-mail { flex: 1.4 1 0; }
-}
-@media (max-width: 720px) {
-  .topbar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px; }
-  .greeting { display: none; }
-  .capture { flex-basis: 100%; }
-  .grid { display: flex; flex-direction: column; padding: 12px 16px; }
-  .side { flex-direction: column; }
-  #panel-vault { height: 420px; }
-  .reader { height: 75vh; min-height: 480px; }
-  .side .panel, #panel-mail { flex: none; }
-  #panel-mail { height: 520px; }
-  #panel-notion { height: auto; }
-  .reader-head { flex-direction: column; }
-  .reader-body { padding: 8px 18px 36px; }
-  .aurora { opacity: .4; }
-}
+/* 版面的 RWD 規則在 views.css */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

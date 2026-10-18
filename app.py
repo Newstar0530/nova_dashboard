@@ -1,9 +1,10 @@
-"""Nova Dashboard — 個人工作台（Obsidian 知識庫 + Gmail 郵件 + Notion 課堂筆記）。"""
+"""Nova Dashboard — 個人工作台（知識庫、郵件、行事曆、待辦、課堂筆記、每日紀錄）。"""
 import asyncio
 import imaplib
 import os
 import webbrowser
 from contextlib import asynccontextmanager
+from datetime import date
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -12,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import mail, notion_sync, vault
+from services import calendar_feed, journal, mail, notion_sync, tasks, vault
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -68,6 +69,11 @@ async def _mail_auth(_req, exc):
 @app.exception_handler(mail.MailConnectionError)
 async def _imap_error(_req, exc):
     return JSONResponse({"detail": f"連線郵件伺服器失敗：{exc}"}, status_code=502)
+
+
+@app.exception_handler(tasks.TaskNotFound)
+async def _task_missing(_req, exc):
+    return JSONResponse({"detail": str(exc)}, status_code=404)
 
 
 @app.exception_handler(httpx.HTTPStatusError)
@@ -165,6 +171,124 @@ def notion_sync_now(force: bool = False):
         raise notion_sync.NotionNotConfigured("尚未設定 NOTION_TOKEN / NOTION_DATABASE_ID，請參考 README")
     notion_sync.sync_in_background(force)
     return {"started": True}
+
+
+# ---------- 待辦 ----------
+
+class TaskIn(BaseModel):
+    text: str
+    due: str | None = None
+
+
+class TaskPatch(BaseModel):
+    text: str | None = None
+    done: bool | None = None
+    due: str | None = None
+    clear_due: bool = False
+
+
+@app.get("/api/tasks")
+def tasks_list(include_done: bool = False):
+    return tasks.list_tasks(include_done)
+
+
+@app.post("/api/tasks")
+def tasks_add(body: TaskIn):
+    return tasks.add_task(body.text, body.due or None)
+
+
+@app.patch("/api/tasks/{task_id}")
+def tasks_update(task_id: str, body: TaskPatch):
+    return tasks.update_task(task_id, body.text, body.done, body.due or None, body.clear_due)
+
+
+@app.delete("/api/tasks/{task_id}")
+def tasks_delete(task_id: str):
+    return tasks.delete_task(task_id)
+
+
+# ---------- 行事曆 ----------
+
+@app.get("/api/calendar/status")
+def calendar_status():
+    return calendar_feed.status()
+
+
+@app.get("/api/calendar/events")
+def calendar_events(start: str, end: str, refresh: bool = False):
+    s, e = date.fromisoformat(start), date.fromisoformat(end)
+    if not s < e or (e - s).days > 62:
+        raise ValueError("日期範圍不正確（最多 62 天）")
+    result = calendar_feed.events(s, e, refresh)
+    result["tasks"] = tasks.due_between(s, e)
+    return result
+
+
+# ---------- 每日紀錄 ----------
+
+class SettingsIn(BaseModel):
+    habits: list[str]
+    subjects: list[str]
+
+
+class MoodIn(BaseModel):
+    mood: int | None = None
+
+
+class DiaryIn(BaseModel):
+    text: str
+
+
+class HabitIn(BaseModel):
+    habit: str
+    done: bool
+
+
+class StudyIn(BaseModel):
+    subject: str
+    minutes: int
+    start: str | None = None
+    note: str = ""
+
+
+@app.get("/api/records/settings")
+def records_settings():
+    return journal.settings()
+
+
+@app.put("/api/records/settings")
+def records_save_settings(body: SettingsIn):
+    return journal.save_settings(body.habits, body.subjects)
+
+
+@app.get("/api/records/stats")
+def records_stats(days: int = 84):
+    return journal.stats(max(7, min(days, 366)))
+
+
+@app.get("/api/records/day/{day}")
+def records_day(day: str):
+    return journal.get_day(journal.parse_date(day))
+
+
+@app.put("/api/records/day/{day}/mood")
+def records_mood(day: str, body: MoodIn):
+    return journal.set_mood(journal.parse_date(day), body.mood)
+
+
+@app.put("/api/records/day/{day}/diary")
+def records_diary(day: str, body: DiaryIn):
+    return journal.set_diary(journal.parse_date(day), body.text)
+
+
+@app.put("/api/records/day/{day}/habit")
+def records_habit(day: str, body: HabitIn):
+    return journal.set_habit(journal.parse_date(day), body.habit, body.done)
+
+
+@app.post("/api/records/day/{day}/study")
+def records_study(day: str, body: StudyIn):
+    return journal.add_study(journal.parse_date(day), body.subject, body.minutes, body.start, body.note)
 
 
 if __name__ == "__main__":

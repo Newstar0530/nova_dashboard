@@ -43,15 +43,20 @@ def schools() -> list[dict]:
     """
     out = []
     for item in config.MAIL_ACCOUNTS.split(";"):
+        item = item.strip()
+        if not item:
+            continue
         if "=" in item:
             label, addr = (s.strip() for s in item.split("=", 1))
-            if label and addr:
-                hint = f"?login_hint={quote(addr)}" if "@" in addr else ""
-                out.append({
-                    "label": label,
-                    "address": addr.lower(),
-                    "link": f"https://outlook.office.com/mail/{hint}",
-                })
+        else:  # 只填地址沒填標籤 → 用網域第一段當標籤（例：neoma-bs）
+            label, addr = item.rsplit("@", 1)[-1].split(".")[0], item
+        if label and addr:
+            hint = f"?login_hint={quote(addr)}" if "@" in addr else ""
+            out.append({
+                "label": label,
+                "address": addr.lower(),
+                "link": f"https://outlook.office.com/mail/{hint}",
+            })
     return out
 
 
