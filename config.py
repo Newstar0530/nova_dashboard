@@ -13,11 +13,12 @@ INBOX_DIR = os.getenv("INBOX_DIR", "00 Inbox")
 CLASS_NOTES_DIR = os.getenv("CLASS_NOTES_DIR", "10 課堂筆記")
 ATTACHMENTS_DIR = os.getenv("ATTACHMENTS_DIR", "90 附件")
 
-# Microsoft Graph（Outlook / 學校信箱）
-MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "").strip()
-MS_TENANT = os.getenv("MS_TENANT", "common").strip() or "common"
-MS_SCOPES = ["Mail.Read", "User.Read"]
-TOKEN_CACHE_FILE = BASE_DIR / ".token_cache.json"
+# Gmail（IMAP + 應用程式密碼）
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "").strip()
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com").strip()
+# 轉寄到 Gmail 的學校信箱：標籤=地址，用分號分隔
+MAIL_ACCOUNTS = os.getenv("MAIL_ACCOUNTS", "").strip()
 
 # Notion
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()

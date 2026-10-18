@@ -137,55 +137,49 @@ async function capture(asNote) {
 
 /* ---------- mail ---------- */
 const mailBody = $("#mail-body");
-let loginPoll = null;
+let mailSchool = null;   // 目前篩選的學校標籤
+let mailReq = 0;         // 避免舊請求覆蓋新結果
 
 async function loadMail() {
+  const req = ++mailReq;
   try {
     const s = await api("/api/mail/status");
-    $("#mail-logout").hidden = !s.signed_in;
+    $("#mail-tools").hidden = !s.configured;
     if (!s.configured) {
-      mailBody.innerHTML = `<div class="notice">尚未設定 Outlook。<br>請在 <code>workbench/.env</code> 填入 <code>MS_CLIENT_ID</code>（步驟見 README）後重新啟動。</div>`;
+      mailBody.innerHTML = `<div class="notice">尚未設定 Gmail。<br>請在 <code>workbench/.env</code> 填入 <code>GMAIL_ADDRESS</code> 與 <code>GMAIL_APP_PASSWORD</code>（步驟見 README）後重新啟動。</div>`;
       return;
     }
-    if (!s.signed_in) {
-      if (s.pending && !s.pending.error) return renderDeviceCode(s.pending);
-      mailBody.innerHTML = `<div class="notice">${s.pending?.error ? esc(s.pending.error) + "<br>" : ""}登入 Microsoft 帳號（學校信箱）以讀取郵件。<br><br>
-        <button class="primary" id="mail-login">登入 Outlook</button></div>`;
-      $("#mail-login").onclick = startLogin;
-      return;
-    }
+    $("#mail-schools").innerHTML = s.schools.length
+      ? `<button class="chip${mailSchool ? "" : " on"}" data-school="">全部</button>` +
+        s.schools.map((x) => `<button class="chip${mailSchool === x.label ? " on" : ""}" data-school="${esc(x.label)}">${esc(x.label)}</button>
+          <a class="chip" href="${esc(x.link)}" target="_blank" title="開啟${esc(x.label)} Outlook（確認有沒有漏轉寄的信）">${esc(x.label)} Outlook ↗</a>`).join("")
+      : "";
     mailBody.innerHTML = `<p class="muted small">${esc(s.account)}・載入中…</p>`;
-    const msgs = await api("/api/mail/messages?top=40");
+    const params = new URLSearchParams({ top: 40 });
+    const q = $("#mail-search").value.trim();
+    if (q) params.set("q", q);
+    if (mailSchool) params.set("school", mailSchool);
+    const msgs = await api(`/api/mail/messages?${params}`);
+    if (req !== mailReq) return;
     mailBody.innerHTML = `<p class="muted small">${esc(s.account)}</p>` + (msgs.length ? msgs.map((m) => `
       <button class="item mail-item${m.is_read ? "" : " unread"}" data-id="${esc(m.id)}">
-        <div class="mail-meta"><span>${m.important ? "❗" : ""}${esc(m.from)}</span><span>${m.has_attachments ? "📎 " : ""}${fmtTime(m.received)}</span></div>
+        <div class="mail-meta"><span>${m.important ? "⭐ " : ""}${esc(m.from)}</span><span>${m.has_attachments ? "📎 " : ""}${fmtTime(m.received)}</span></div>
         <div class="title">${esc(m.subject)}</div>
-        <div class="sub">${esc(m.preview)}</div>
-      </button>`).join("") : `<p class="muted small">收件匣是空的 🎉</p>`);
+        ${m.school ? `<div class="sub"><span class="tag">${esc(m.school)}</span></div>` : ""}
+      </button>`).join("") : `<p class="muted small">${q || mailSchool ? "沒有符合的郵件" : "收件匣是空的 🎉"}</p>`);
   } catch (e) {
-    mailBody.innerHTML = `<div class="notice">${esc(e.message)}</div>`;
+    if (req === mailReq) mailBody.innerHTML = `<div class="notice">${esc(e.message)}</div>`;
   }
 }
 
-function renderDeviceCode(p) {
-  mailBody.innerHTML = `<div class="notice">
-    1. 開啟 <a href="${esc(p.verification_uri)}" target="_blank">${esc(p.verification_uri)}</a><br>
-    2. 輸入代碼：<div class="device-code">${esc(p.user_code)}</div>
-    3. 用學校 / Outlook 帳號登入並同意權限<br><span class="muted small">完成後這裡會自動更新…</span></div>`;
-  clearInterval(loginPoll);
-  loginPoll = setInterval(async () => {
-    const s = await api("/api/mail/status").catch(() => null);
-    if (s && (s.signed_in || s.pending?.error || !s.pending)) { clearInterval(loginPoll); loadMail(); }
-  }, 3000);
-}
-
-async function startLogin() {
-  try {
-    const p = await api("/api/mail/login", { method: "POST" });
-    renderDeviceCode(p);
-    window.open(p.verification_uri, "_blank");
-  } catch (e) { toast(e.message); }
-}
+$("#mail-schools").addEventListener("click", (e) => {
+  const chip = e.target.closest("button.chip");
+  if (!chip) return;
+  mailSchool = chip.dataset.school || null;
+  loadMail();
+});
+let mailSearchTimer;
+$("#mail-search").addEventListener("input", () => { clearTimeout(mailSearchTimer); mailSearchTimer = setTimeout(loadMail, 500); });
 
 mailBody.addEventListener("click", async (e) => {
   const item = e.target.closest(".mail-item");
@@ -199,10 +193,11 @@ mailBody.addEventListener("click", async (e) => {
     reader.innerHTML = `
       <div class="reader-head">
         <div><h1>${esc(m.subject)}</h1>
-          <div class="muted small">${esc(m.from)}・${new Date(m.received).toLocaleString("zh-TW")}</div></div>
+          <div class="muted small">${m.school ? `<span class="tag">${esc(m.school)}</span> ` : ""}${esc(m.from)}・${m.received ? new Date(m.received).toLocaleString("zh-TW") : ""}</div>
+          ${m.attachments?.length ? `<div class="muted small">📎 ${m.attachments.map(esc).join("、")}</div>` : ""}</div>
         <div class="btns">
           <button class="ghost" id="to-vault">存到知識庫</button>
-          <a class="ghost" href="${esc(m.web_link)}" target="_blank">在 Outlook 開啟</a>
+          ${m.web_link ? `<a class="ghost" href="${esc(m.web_link)}" target="_blank">在 Gmail 開啟</a>` : ""}
         </div>
       </div>
       <iframe sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`;
@@ -218,7 +213,6 @@ mailBody.addEventListener("click", async (e) => {
   } catch (err) { reader.innerHTML = `<div class="empty"><p>${esc(err.message)}</p></div>`; }
 });
 $("#mail-refresh").onclick = loadMail;
-$("#mail-logout").onclick = async () => { await api("/api/mail/logout", { method: "POST" }); loadMail(); };
 
 /* ---------- notion ---------- */
 const notionBody = $("#notion-body");

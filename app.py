@@ -1,5 +1,6 @@
-"""Nova Dashboard — 個人工作台（Obsidian 知識庫 + Outlook 郵件 + Notion 課堂筆記）。"""
+"""Nova Dashboard — 個人工作台（Obsidian 知識庫 + Gmail 郵件 + Notion 課堂筆記）。"""
 import asyncio
+import imaplib
 import os
 import webbrowser
 from contextlib import asynccontextmanager
@@ -49,9 +50,15 @@ async def _not_configured(_req, exc):
     return JSONResponse({"detail": str(exc), "code": "not_configured"}, status_code=412)
 
 
-@app.exception_handler(mail.NotSignedIn)
-async def _not_signed_in(_req, exc):
-    return JSONResponse({"detail": str(exc), "code": "not_signed_in"}, status_code=401)
+@app.exception_handler(mail.MailAuthError)
+async def _mail_auth(_req, exc):
+    return JSONResponse({"detail": str(exc), "code": "auth_failed"}, status_code=401)
+
+
+@app.exception_handler(imaplib.IMAP4.error)
+@app.exception_handler(mail.MailConnectionError)
+async def _imap_error(_req, exc):
+    return JSONResponse({"detail": f"連線郵件伺服器失敗：{exc}"}, status_code=502)
 
 
 @app.exception_handler(httpx.HTTPStatusError)
@@ -114,27 +121,16 @@ def vault_capture(body: Capture):
     return vault.capture(body.text, body.title or None)
 
 
-# ---------- Outlook ----------
+# ---------- Gmail ----------
 
 @app.get("/api/mail/status")
 def mail_status():
     return mail.status()
 
 
-@app.post("/api/mail/login")
-def mail_login():
-    return mail.start_login()
-
-
-@app.post("/api/mail/logout")
-def mail_logout():
-    mail.logout()
-    return {"ok": True}
-
-
 @app.get("/api/mail/messages")
-def mail_messages(folder: str = "inbox", top: int = 30, q: str | None = None):
-    return mail.list_messages(folder, min(top, 100), q or None)
+def mail_messages(top: int = 40, q: str | None = None, school: str | None = None):
+    return mail.list_messages(min(top, 100), q or None, school or None)
 
 
 @app.get("/api/mail/messages/{msg_id}")

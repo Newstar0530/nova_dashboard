@@ -1,13 +1,13 @@
 # ✦ Nova Dashboard
 
-個人工作台：一個本機網頁，同時看 **Obsidian 知識庫**、**Outlook / 學校信箱**、**Notion 課堂筆記**。
+個人工作台：一個本機網頁，同時看 **Obsidian 知識庫**、**Gmail（學校信箱轉寄）**、**Notion 課堂筆記**。
 
 - 📚 **知識庫**：瀏覽、搜尋、閱讀 Obsidian vault（支援 `[[雙向連結]]`），一鍵在 Obsidian 開啟
 - ✍️ **快速記錄**：上方輸入框 Enter → 附加到 `00 Inbox/今天.md`；Shift+Enter → 另存新筆記
-- ✉️ **郵件**：Microsoft Graph 讀取 Outlook 收件匣，重要的信可「存到知識庫」
+- ✉️ **郵件**：IMAP 讀取 Gmail（學校信箱轉寄過來），可依學校篩選、用 Gmail 語法搜尋，重要的信可「存到知識庫」
 - 📝 **課堂筆記**：Notion 資料庫 → 同步成 Markdown 到 `10 課堂筆記/<課程>/`，圖片自動下載
 
-資料只在你的電腦上：伺服器只聽 `127.0.0.1`，token 存在本機 `.env` / `.token_cache.json`（皆已 gitignore）。
+資料只在你的電腦上：伺服器只聽 `127.0.0.1`，密碼與 token 只存在本機 `.env`（已 gitignore）。
 
 ## 快速開始
 
@@ -21,20 +21,24 @@ git clone https://github.com/Newstar0530/nova_dashboard.git workbench
 
 vault 預設在 workbench 同層的 `知識庫`，可用 `.env` 的 `VAULT_PATH` 改成任何資料夾。
 
-## 設定 Outlook（學校信箱）
+## 設定郵件（學校信箱 → Gmail）
 
-需要註冊一個 Azure App（免費，約 3 分鐘）：
+學校封鎖了第三方 App 直接讀 Outlook，所以改成「學校信箱轉寄到 Gmail，工作台讀 Gmail」。
 
-1. 到 [Azure Portal → 應用程式註冊](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) →「新增註冊」
-2. 名稱隨意（例如 `Nova Dashboard`）；支援的帳戶類型選 **「任何組織目錄中的帳戶及個人 Microsoft 帳戶」**
-3. 建立後，左側「驗證」→ 最下方 **「允許公用用戶端流程」設為「是」** → 儲存
-4. 「API 權限」確認有 `Mail.Read`、`User.Read`（Microsoft Graph／委派）
-5. 複製「概觀」頁的 **應用程式 (用戶端) 識別碼** 填到 `.env` 的 `MS_CLIENT_ID`
-6. 重啟工作台 → 郵件面板按「登入 Outlook」→ 輸入畫面上的代碼
+1. **學校信箱轉寄**：學校 Outlook 網頁版 → 設定 →「郵件」→「轉寄」→ 填 Gmail，勾「保留轉寄郵件的複本」
+2. **Gmail 防漏信**：Gmail 設定 →「篩選器和封鎖的地址」→ 建立篩選器，「收件者」填學校信箱 → 勾「一律不要將它傳送到垃圾郵件」
+3. **應用程式密碼**：Google 帳號開啟兩步驟驗證 → https://myaccount.google.com/apppasswords 建立一組（16 碼）
+4. 填入 `.env`：
+   ```
+   GMAIL_ADDRESS=你的帳號@gmail.com
+   GMAIL_APP_PASSWORD=16碼應用程式密碼
+   MAIL_ACCOUNTS=A校=s123@a.edu.tw;B校=s456@b.edu.tw
+   ```
+   `MAIL_ACCOUNTS` 可省略；填了之後郵件會標示來自哪間學校、可以篩選，並出現「開啟學校 Outlook」按鈕（用來確認有沒有漏轉寄的信）。
+5. 重啟工作台
 
-> 如果學校帳號出現「需要管理員核准」，代表學校 IT 禁止使用者自行授權第三方 App，
-> 需請學校 IT 核准，或改用個人 Outlook 帳號並設定學校信件自動轉寄。
-> 沒有 Azure 帳號的話，用個人 Microsoft 帳號登入 Azure Portal 即可註冊。
+搜尋框支援 Gmail 語法，例如 `from:王教授`、`has:attachment`、`subject:期中考`、`newer_than:7d`。
+點開信件會標為已讀。其他支援 IMAP 的信箱也能用：改 `IMAP_HOST`，帳號密碼一樣填 `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD`。
 
 ## 設定 Notion 課堂筆記
 
@@ -57,7 +61,7 @@ vault 預設在 workbench 同層的 `知識庫`，可用 `.env` 的 `VAULT_PATH`
 app.py                 FastAPI 伺服器 + API 路由
 config.py              讀取 .env
 services/vault.py      Obsidian vault 讀寫、搜尋、Markdown 渲染
-services/mail.py       Microsoft Graph 郵件（MSAL device code 登入）
+services/mail.py       Gmail 郵件（IMAP + 應用程式密碼）
 services/notion_sync.py Notion 資料庫 → Markdown
 static/                前端（純 HTML/CSS/JS）
 ```

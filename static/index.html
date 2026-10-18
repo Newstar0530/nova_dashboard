@@ -46,8 +46,11 @@
           <h2>✉️ 郵件</h2>
           <div class="actions">
             <button class="icon" id="mail-refresh" title="重新整理">⟳</button>
-            <button class="icon" id="mail-logout" title="登出" hidden>⎋</button>
           </div>
+        </div>
+        <div id="mail-tools" hidden>
+          <input id="mail-search" class="search" placeholder="搜尋郵件（支援 Gmail 語法，如 from:教授 has:attachment）">
+          <div class="courses" id="mail-schools"></div>
         </div>
         <div id="mail-body" class="scroll"></div>
       </section>
