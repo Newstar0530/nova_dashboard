@@ -32,25 +32,26 @@ const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getD
 const todayISO = () => isoDate(new Date());
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const parseISO = (s) => { const [y, m, d] = s.slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
-const WEEK = "日一二三四五六";
-const fmtDay = (s) => { const d = parseISO(s); return `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`; };
+const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const fmtMD = (s) => { const d = parseISO(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const fmtDay = (s) => `${WEEK[parseISO(s).getDay()]} ${fmtMD(s)}`;
 const hhmm = (iso) => iso.length > 10 ? iso.slice(11, 16) : "";
 
 function fmtTime(iso) {
   if (!iso) return "";
   const d = new Date(iso), now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" });
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // 截止日的相對說明
 function dueLabel(due) {
   if (!due) return "";
   const diff = Math.round((parseISO(due) - parseISO(todayISO())) / 86400000);
-  if (diff < 0) return `逾期 ${-diff} 天`;
-  if (diff === 0) return "今天";
-  if (diff === 1) return "明天";
-  if (diff < 7) return `${diff} 天後`;
+  if (diff < 0) return `${-diff} day${diff === -1 ? "" : "s"} overdue`;
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff < 7) return `in ${diff} days`;
   return fmtDay(due);
 }
 
@@ -67,7 +68,7 @@ function needInput(input, msg) {
 function dialog(html, onSubmit) {
   const dlg = $("#dlg");
   dlg.innerHTML = `<form method="dialog" class="dlg-form">${html}
-    <div class="dlg-btns"><button value="cancel" class="ghost" formnovalidate>取消</button><button value="ok" class="small-btn">確定</button></div></form>`;
+    <div class="dlg-btns"><button value="cancel" class="ghost" formnovalidate>Cancel</button><button value="ok" class="small-btn">OK</button></div></form>`;
   const form = $("form", dlg);
   form.addEventListener("submit", async (e) => {
     if (e.submitter?.value !== "ok") return;
@@ -113,8 +114,8 @@ addEventListener("DOMContentLoaded", () => {
 // ---------- 問候 ----------
 (function greet() {
   const h = new Date().getHours();
-  const hi = h < 5 ? "夜深了" : h < 12 ? "早安" : h < 18 ? "午安" : "晚安";
-  $("#greeting").textContent = `${hi}・${new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric", weekday: "long" })}`;
+  const hi = h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  $("#greeting").textContent = `${hi} · ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", weekday: "long" })}`;
 })();
 
 // ---------- 快速記錄 ----------
@@ -126,14 +127,14 @@ $("#capture").addEventListener("submit", (e) => { e.preventDefault(); capture(fa
 async function capture(asNote) {
   const input = $("#capture-text");
   const text = input.value.trim();
-  if (!text) return needInput(input, "先在上方輸入框寫下想記錄的內容");
+  if (!text) return needInput(input, "Type something in the box above first");
   const save = async (title) => {
     const r = await api("/api/vault/capture", { method: "POST", body: { text, title } });
     input.value = "";
-    toast(`已記錄到 ${r.path}`);
+    toast(`Saved to ${r.path}`);
     emit("vault-changed");
   };
   if (!asNote) return save(null).catch((e) => toast(e.message));
-  dialog(`<h3>另存成新筆記</h3><label>標題<input name="title" required value="${esc(text.slice(0, 30))}"></label>`,
+  dialog(`<h3>Save as new note</h3><label>Title<input name="title" required value="${esc(text.slice(0, 30))}"></label>`,
     (fd) => save(fd.get("title")));
 }

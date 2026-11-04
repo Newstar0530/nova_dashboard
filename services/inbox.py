@@ -60,13 +60,13 @@ def _locate(capture_id: str):
         rel, idx, h = capture_id.rsplit("#", 2)
         idx = int(idx)
     except ValueError:
-        raise CaptureNotFound("記錄 id 不正確")
+        raise CaptureNotFound("Invalid capture id")
     if not rel.startswith(config.INBOX_DIR.rstrip("/") + "/"):
-        raise CaptureNotFound("只能處理 Inbox 裡的快速記錄")
+        raise CaptureNotFound("Only quick captures in the Inbox can be processed")
     p = vault.safe_path(rel)
     lines = p.read_text(encoding="utf-8").splitlines() if p.exists() else []
     if not 0 <= idx < len(lines) or _h(lines[idx]) != h or not LINE_RE.match(lines[idx]):
-        raise CaptureNotFound("這筆記錄已在別處被修改，請重新整理")
+        raise CaptureNotFound("This capture was changed elsewhere; please refresh")
     return p, lines, idx
 
 

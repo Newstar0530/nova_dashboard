@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,18 +24,18 @@
     <div class="brand"><span class="logo">✦</span><span class="grad-text">Nova</span></div>
     <div class="greeting"><span class="dot"></span><span id="greeting"></span></div>
     <form id="capture" class="capture" autocomplete="off">
-      <input id="capture-text" placeholder="快速記錄到 Inbox…（Enter 送出，Shift+Enter 另存成新筆記）">
-      <button type="submit">記錄</button>
+      <input id="capture-text" placeholder="Quick capture to Inbox… (Enter to save, Shift+Enter to save as a new note)">
+      <button type="submit">Capture</button>
     </form>
   </header>
 
   <div class="shell">
-    <nav class="sidenav" aria-label="主選單">
-      <a href="#today" data-view="today"><span class="nav-ic">◐</span><span>今天</span></a>
-      <a href="#calendar" data-view="calendar"><span class="nav-ic">▦</span><span>行事曆</span></a>
-      <a href="#mail" data-view="mail"><span class="nav-ic">✉</span><span>郵件</span><span class="nav-badge" id="mail-badge" hidden></span></a>
-      <a href="#notes" data-view="notes"><span class="nav-ic">❖</span><span>筆記</span></a>
-      <a href="#records" data-view="records"><span class="nav-ic">◔</span><span>紀錄</span></a>
+    <nav class="sidenav" aria-label="Main menu">
+      <a href="#today" data-view="today"><span class="nav-ic">◐</span><span>Today</span></a>
+      <a href="#calendar" data-view="calendar"><span class="nav-ic">▦</span><span>Calendar</span></a>
+      <a href="#mail" data-view="mail"><span class="nav-ic">✉</span><span>Mail</span><span class="nav-badge" id="mail-badge" hidden></span></a>
+      <a href="#notes" data-view="notes"><span class="nav-ic">❖</span><span>Notes</span></a>
+      <a href="#records" data-view="records"><span class="nav-ic">◔</span><span>Records</span></a>
     </nav>
 
     <main class="views">
@@ -46,16 +46,16 @@
           <div class="rs rs-col" data-rs="today-left" data-dir="v" data-grow="1">
             <section data-grow="1" class="panel reveal" id="card-schedule">
               <div class="panel-head">
-                <h2 class="bt">今日行程 <span class="eyebrow">Schedule</span></h2>
-                <a class="ghost" href="#calendar">行事曆 →</a>
+                <h2 class="bt">Today's schedule <span class="eyebrow">Schedule</span></h2>
+                <a class="ghost" href="#calendar">Calendar →</a>
               </div>
               <div id="schedule-body" class="scroll"></div>
             </section>
 
             <section data-grow="1" class="panel reveal" id="card-mail">
               <div class="panel-head">
-                <h2 class="bt">學校信件 <span class="eyebrow">Mail</span></h2>
-                <a class="ghost" href="#mail">全部 →</a>
+                <h2 class="bt">School mail <span class="eyebrow">Mail</span></h2>
+                <a class="ghost" href="#mail">All →</a>
               </div>
               <div id="today-mail" class="scroll"></div>
             </section>
@@ -72,14 +72,14 @@
 
             <section data-grow="1" class="panel reveal" id="card-tasks">
               <div class="panel-head">
-                <h2 class="bt">待辦 <span class="eyebrow">To-do</span></h2>
-                <label class="toggle small"><input type="checkbox" id="tasks-show-done"> 顯示已完成</label>
+                <h2 class="bt">Tasks <span class="eyebrow">To-do</span></h2>
+                <label class="toggle small"><input type="checkbox" id="tasks-show-done"> Show completed</label>
               </div>
               <form id="task-form" class="task-form" autocomplete="off">
-                <input id="task-text" class="search" placeholder="新增待辦…（可加 #標籤，存成 TaskNotes）">
-                <input id="task-due" type="date" class="date-input" title="截止日">
-                <select id="task-prio" class="date-input prio-select" title="優先度"></select>
-                <button class="small-btn" type="submit">新增</button>
+                <input id="task-text" class="search" placeholder="Add a task… (#tags allowed, saved as TaskNotes)">
+                <input id="task-due" type="date" class="date-input" title="Due date">
+                <select id="task-prio" class="date-input prio-select" title="Priority"></select>
+                <button class="small-btn" type="submit">Add</button>
               </form>
               <div id="tasks-body" class="scroll"></div>
             </section>
@@ -88,18 +88,18 @@
           <div class="rs rs-col" data-rs="today-right" data-dir="v" data-grow="1">
             <section data-grow="0.95" class="panel reveal" id="card-checkin">
               <div class="panel-head">
-                <h2 class="bt">今日打卡 <span class="eyebrow">Check-in</span></h2>
-                <a class="ghost" href="#records">紀錄 →</a>
+                <h2 class="bt">Daily check-in <span class="eyebrow">Check-in</span></h2>
+                <a class="ghost" href="#records">Records →</a>
               </div>
-              <div class="sub-label">心情</div>
+              <div class="sub-label">Mood</div>
               <div class="mood-row" id="mood-row"></div>
-              <div class="sub-label">習慣</div>
+              <div class="sub-label">Habits</div>
               <div class="habit-row" id="habit-row"></div>
             </section>
 
             <section data-grow="0.9" class="panel reveal" id="card-focus">
               <div class="panel-head">
-                <h2 class="bt">專注計時 <span class="eyebrow">Focus</span></h2>
+                <h2 class="bt">Focus timer <span class="eyebrow">Focus</span></h2>
                 <span class="muted small" id="focus-today"></span>
               </div>
               <div class="focus">
@@ -110,20 +110,20 @@
                     <button data-min="25" class="on">25</button><button data-min="50">50</button><button data-min="90">90</button>
                   </div>
                   <div class="focus-btns">
-                    <button class="small-btn" id="focus-start">開始</button>
-                    <button class="ghost" id="focus-stop" hidden>結束並記錄</button>
+                    <button class="small-btn" id="focus-start">Start</button>
+                    <button class="ghost" id="focus-stop" hidden>Stop &amp; log</button>
                   </div>
-                  <button class="link-btn" id="focus-manual">手動補記時數</button>
+                  <button class="link-btn" id="focus-manual">Log time manually</button>
                 </div>
               </div>
             </section>
 
             <section data-grow="1.15" class="panel reveal" id="card-diary">
               <div class="panel-head">
-                <h2 class="bt">今日日記 <span class="eyebrow">Journal</span></h2>
+                <h2 class="bt">Today's journal <span class="eyebrow">Journal</span></h2>
                 <span class="muted small" id="diary-status"></span>
               </div>
-              <textarea id="diary-text" class="diary" placeholder="今天發生了什麼？（自動儲存到 40 紀錄/日記）"></textarea>
+              <textarea id="diary-text" class="diary" placeholder="What happened today? (auto-saved to 40 紀錄/日記)"></textarea>
             </section>
           </div>
         </div>
@@ -136,10 +136,10 @@
             <div class="panel-head">
               <h2><span id="cal-title"></span> <span class="eyebrow">Calendar</span></h2>
               <div class="actions">
-                <button class="ghost" id="cal-prev" title="上個月">‹</button>
-                <button class="ghost" id="cal-today">今天</button>
-                <button class="ghost" id="cal-next" title="下個月">›</button>
-                <button class="icon" id="cal-refresh" title="重新抓取行事曆">⟳</button>
+                <button class="ghost" id="cal-prev" title="Previous month">‹</button>
+                <button class="ghost" id="cal-today">Today</button>
+                <button class="ghost" id="cal-next" title="Next month">›</button>
+                <button class="icon" id="cal-refresh" title="Refetch calendars">⟳</button>
               </div>
             </div>
             <div id="cal-notice"></div>
@@ -157,17 +157,17 @@
         <div class="split rs" data-rs="mail" data-dir="h">
           <section data-grow="1" class="panel reveal" id="panel-mail">
             <div class="panel-head">
-              <h2 class="bt">郵件 <span class="eyebrow">Mail</span></h2>
-              <div class="actions"><button class="icon" id="mail-refresh" title="重新整理">⟳</button></div>
+              <h2 class="bt">Mail <span class="eyebrow">Inbox</span></h2>
+              <div class="actions"><button class="icon" id="mail-refresh" title="Refresh">⟳</button></div>
             </div>
             <div id="mail-tools" hidden>
-              <input id="mail-search" class="search" placeholder="搜尋郵件（支援 Gmail 語法，如 from:教授 has:attachment）">
+              <input id="mail-search" class="search" placeholder="Search mail (Gmail syntax works, e.g. from:professor has:attachment)">
               <div class="courses" id="mail-schools"></div>
             </div>
             <div id="mail-body" class="scroll"></div>
           </section>
           <section data-grow="2.4" class="panel reader reveal" id="mail-reader">
-            <div class="empty"><div class="big">✉</div><p>選一封信來閱讀</p></div>
+            <div class="empty"><div class="big">✉</div><p>Select a message to read</p></div>
           </section>
         </div>
       </section>
@@ -177,23 +177,24 @@
         <div class="notes-layout rs" data-rs="notes" data-dir="h">
           <section data-grow="1" class="panel reveal" id="panel-vault">
             <div class="panel-head">
-              <h2 class="bt">知識庫 <span class="eyebrow">Vault</span></h2>
+              <h2 class="bt">Knowledge base <span class="eyebrow">Vault</span></h2>
               <span class="muted small" id="vault-name"></span>
+              <button class="small-btn" id="vault-new">+ New</button>
             </div>
-            <input id="vault-search" class="search" placeholder="搜尋筆記…">
+            <input id="vault-search" class="search" placeholder="Search notes…">
             <div class="tabs">
-              <button class="tab active" data-tab="recent">最近</button>
-              <button class="tab" data-tab="tree">全部</button>
+              <button class="tab active" data-tab="recent">Recent</button>
+              <button class="tab" data-tab="tree">All</button>
             </div>
             <div class="list scroll" id="vault-list"></div>
           </section>
           <section data-grow="3" class="panel reader reveal" id="note-reader">
-            <div class="empty"><div class="big">✦</div><p>從左邊選一篇筆記</p></div>
+            <div class="empty"><div class="big">✦</div><p>Pick a note on the left</p></div>
           </section>
           <section data-grow="0.9" class="panel reveal" id="panel-notion">
             <div class="panel-head">
-              <h2 class="bt">課堂筆記 <span class="eyebrow">Notion</span></h2>
-              <button class="small-btn" id="notion-sync">同步</button>
+              <h2 class="bt">Class notes <span class="eyebrow">Notion</span></h2>
+              <button class="small-btn" id="notion-sync">Sync</button>
             </div>
             <div id="notion-body"></div>
           </section>
@@ -205,25 +206,25 @@
         <div class="records-grid">
           <section class="panel reveal" id="rec-habits">
             <div class="panel-head">
-              <h2 class="bt">習慣 <span class="eyebrow">Last 12 weeks</span></h2>
-              <button class="ghost" id="rec-settings-btn">編輯項目</button>
+              <h2 class="bt">Habits <span class="eyebrow">Last 12 weeks</span></h2>
+              <button class="ghost" id="rec-settings-btn">Edit items</button>
             </div>
             <div id="habit-heatmaps" class="scroll"></div>
           </section>
           <section class="panel reveal" id="rec-mood">
-            <div class="panel-head"><h2 class="bt">心情 <span class="eyebrow">Last 30 days</span></h2></div>
+            <div class="panel-head"><h2 class="bt">Mood <span class="eyebrow">Last 30 days</span></h2></div>
             <div class="chart" id="mood-chart"></div>
           </section>
           <section class="panel reveal" id="rec-study">
             <div class="panel-head">
-              <h2 class="bt">學習時數 <span class="eyebrow">Last 14 days</span></h2>
+              <h2 class="bt">Study time <span class="eyebrow">Last 14 days</span></h2>
               <span class="muted small" id="study-total"></span>
             </div>
             <div class="chart" id="study-chart"></div>
           </section>
           <section class="panel reveal" id="rec-diary">
             <div class="panel-head">
-              <h2 class="bt">日記 <span class="eyebrow">Journal</span></h2>
+              <h2 class="bt">Journal <span class="eyebrow">Past entries</span></h2>
               <input type="date" id="diary-date" class="date-input">
             </div>
             <div id="diary-view" class="scroll"></div>

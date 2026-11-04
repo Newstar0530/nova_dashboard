@@ -19,7 +19,7 @@ const Splitter = (() => {
       if (i === 0) return;
       const g = document.createElement("div");
       g.className = `rs-gutter ${horiz ? "rs-gutter-h" : "rs-gutter-v"}`;
-      g.title = "拖曳調整大小，雙擊恢復預設";
+      g.title = "Drag to resize, double-click to reset";
       g.setAttribute("role", "separator");
       g.setAttribute("aria-orientation", horiz ? "vertical" : "horizontal");
       box.insertBefore(g, c);
@@ -33,7 +33,7 @@ const Splitter = (() => {
       save(name, null);
       apply(box, defaults(box));
       emit("layout-changed");
-      toast("已恢復預設大小");
+      toast("Reset to default size");
     });
 
     box.addEventListener("pointerdown", (e) => {
