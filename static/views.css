@@ -359,3 +359,21 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 /* 課程（TaskNotes projects） */
 .course-select { flex: 1 1 auto; width: auto; max-width: 180px; }
 .tag.course-tag { color: var(--accent-3); border-color: rgba(122, 162, 255, .4); background: rgba(122, 162, 255, .1); }
+
+/* ============ IELTS 卡片 ============ */
+#card-ielts .notice { margin-bottom: 10px; }
+#card-ielts code, .ielts-actions code { font-family: var(--mono); font-size: 11px; color: #d6c8ff; }
+.ielts-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; font-size: 13px; }
+.ielts-grid .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.ielts-grid .v { min-width: 0; overflow-wrap: anywhere; }
+.ielts-grid .v b { color: var(--ink); font-weight: 600; }
+.ielts-grid .link-btn { margin-left: 6px; }
+.ielts-grid a { color: var(--accent-3); text-decoration: none; }
+.ielts-grid a:hover { color: var(--tiffany); }
+.ielts-focus { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); }
+.ielts-focus li::marker { color: var(--tiffany); }
+.ielts-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* 從 IELTS 卡片跳到專注計時時，計時卡片閃一下 */
+.panel.flash { animation: flash 1.2s var(--ease); }
+@keyframes flash { 0%, 100% { box-shadow: 0 30px 60px -40px rgba(0,0,0,.9); } 30% { box-shadow: 0 0 0 2px var(--tiffany), 0 0 40px -6px var(--tiffany); } }
+.ielts-actions .ghost { gap: 6px; }

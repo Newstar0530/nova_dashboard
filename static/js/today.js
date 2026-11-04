@@ -246,6 +246,71 @@ Nova.views.today = (() => {
     });
   }
 
+  // ---------- IELTS（30 雅思 資料夾，/ielts skill 的資料） ----------
+  let ielts = null;
+
+  async function loadIelts() {
+    const card = $("#card-ielts");
+    try {
+      ielts = await api("/api/ielts");
+    } catch { card.hidden = true; return; }
+    card.hidden = !ielts.available;
+    if (!ielts.available) return;
+    const s = ielts;
+    $("#ielts-phase").textContent = `${s.phase} · Target ${s.target_band}`;
+    $("#ielts-countdown").textContent = s.days_to_exam == null ? "No exam date" : s.days_to_exam >= 0 ? `Exam in ${s.days_to_exam} days` : "Exam date passed";
+
+    const notices = [];
+    if (s.needs_diagnostic) notices.push(`Start with one full mock test, then run <code>/ielts mock</code>. Add your exam date in <code>學習計畫</code>.`);
+    if (s.sprint_soon) notices.push(`The exam is less than two weeks away — switch the phase to <b>Final sprint</b>.`);
+
+    const due = s.due_total
+      ? `<b>${s.due_total}</b> due <span class="muted">(${[["words", "words"], ["patterns", "patterns"], ["grammar", "grammar"]].filter(([k]) => s.due[k]).map(([k, l]) => `${s.due[k]} ${l}`).join(" · ")})</span>`
+      : s.next_due ? `None today <span class="muted">· ${s.next_due_count} due ${dueLabel(s.next_due).toLowerCase()}</span>` : `<span class="muted">No cards yet</span>`;
+    const waiting = s.waiting.length
+      ? s.waiting.map((w) => `<a href="#" class="ielts-note" data-path="${esc(w.path)}">${esc(w.title)}</a>`).join("<br>")
+      : `<span class="muted">None</span>`;
+
+    $("#ielts-body").innerHTML = `
+      ${notices.map((n) => `<div class="notice small">${n}</div>`).join("")}
+      <div class="ielts-grid">
+        <span class="k">Today (${esc(s.weekday)})</span>
+        <span class="v"><b>${esc(s.skill)}</b>
+          ${s.focus_subject ? `<button class="link-btn" id="ielts-timer">Set timer →</button>` : ""}</span>
+        <span class="k">Review</span><span class="v">${due}${s.due_total ? ` <code>/ielts review</code>` : ""}</span>
+        <span class="k">Feedback</span><span class="v">${waiting}</span>
+        <span class="k">Studied</span><span class="v">${s.minutes_today ? `${s.minutes_today} min today` : `<span class="muted">Nothing logged today</span>`}</span>
+      </div>
+      ${s.weekly_focus.length ? `<div class="sub-label">This week's focus</div><ul class="ielts-focus">${s.weekly_focus.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+      <div class="ielts-actions">
+        <button class="ghost" id="ielts-copy" title="Paste into Claude Code (opened in the vault folder)">Copy <code>/ielts today</code></button>
+        <a class="ghost" href="${esc(s.overview_uri)}">Overview in Obsidian ↗</a>
+      </div>`;
+  }
+
+  function initIelts() {
+    $("#ielts-body").addEventListener("click", async (e) => {
+      if (e.target.closest("#ielts-timer")) {
+        // 專注計時預選今天的科目（計時中就不動）
+        if (getFocus()) return toast("A focus session is already running");
+        const sel = $("#focus-subject");
+        if (![...sel.options].some((o) => o.value === ielts.focus_subject)) sel.add(new Option(ielts.focus_subject));
+        sel.value = ielts.focus_subject;
+        $("#card-focus").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        $("#card-focus").classList.remove("flash"); void $("#card-focus").offsetWidth; $("#card-focus").classList.add("flash");
+        toast(`Focus timer set to ${ielts.focus_subject} — press Start`);
+      } else if (e.target.closest("#ielts-copy")) {
+        try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today"); }
+        catch { toast("Couldn't copy — type /ielts today in Claude Code"); }
+      } else if (e.target.closest(".ielts-note")) {
+        e.preventDefault();
+        go("notes");
+        Nova.views.notes.openNote(e.target.closest(".ielts-note").dataset.path);
+      }
+    });
+    on("records-changed", () => Nova.current === "today" && loadIelts());
+  }
+
   // ---------- 專注計時（番茄鐘） ----------
   const FOCUS_KEY = "nova.focus";
   let focusLen = 25, tick = null;
@@ -372,7 +437,7 @@ Nova.views.today = (() => {
 
   return {
     init() {
-      initTasks(); initInbox(); initCheckin(); initFocus(); initDiary();
+      initTasks(); initInbox(); initCheckin(); initIelts(); initFocus(); initDiary();
       $("#today-mail").addEventListener("click", (e) => {
         const item = e.target.closest(".mail-item");
         if (item) { go("mail"); Nova.views.mail.open(item.dataset.id); }
@@ -380,7 +445,7 @@ Nova.views.today = (() => {
       on("settings-changed", loadDay);
     },
     show() {
-      loadSchedule(); loadTasks(); loadInbox(); loadMail();
+      loadSchedule(); loadTasks(); loadInbox(); loadMail(); loadIelts();
       loadDay().catch((e) => toast(e.message));
     },
   };

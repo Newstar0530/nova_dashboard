@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import calendar_feed, inbox, journal, links, mail, notion_sync, tasks, vault
+from services import calendar_feed, ielts, inbox, journal, links, mail, notion_sync, tasks, vault
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -296,6 +296,11 @@ def tasks_update(task_id: str, body: TaskPatch):
 @app.delete("/api/tasks/{task_id:path}")
 def tasks_delete(task_id: str):
     return tasks.delete_task(task_id)
+
+
+@app.get("/api/ielts")
+def ielts_status():
+    return ielts.status()
 
 
 @app.post("/api/links/rebuild")
