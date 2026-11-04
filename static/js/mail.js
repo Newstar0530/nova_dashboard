@@ -14,14 +14,14 @@ Nova.views.mail = (() => {
       const s = await api("/api/mail/status");
       $("#mail-tools").hidden = !s.configured;
       if (!s.configured) {
-        body().innerHTML = `<div class="notice">尚未設定 Gmail。<br>請在 <code>workbench/.env</code> 填入 <code>GMAIL_ADDRESS</code> 與 <code>GMAIL_APP_PASSWORD</code>（步驟見 README）後重新啟動。</div>`;
+        body().innerHTML = `<div class="notice">Gmail is not set up yet.<br>Set <code>GMAIL_ADDRESS</code> and <code>GMAIL_APP_PASSWORD</code> in <code>workbench/.env</code> (see the README for steps), then restart.</div>`;
         return;
       }
       $("#mail-schools").innerHTML =
-        `<button class="chip${onlySchool ? " on" : ""}" id="only-school" title="只顯示從學校 Outlook 轉寄過來的信">🏫 只看學校轉寄</button>` +
+        `<button class="chip${onlySchool ? " on" : ""}" id="only-school" title="Only show mail forwarded from school Outlook">🏫 School only</button>` +
         s.schools.map((x) => `<button class="chip${mailSchool === x.label ? " on" : ""}" data-school="${esc(x.label)}">${esc(x.label)}</button>
-          <a class="chip" href="${esc(x.link)}" target="_blank" title="開啟${esc(x.label)} Outlook（確認有沒有漏轉寄的信）">${esc(x.label)} Outlook ↗</a>`).join("");
-      if (!body().children.length) body().innerHTML = `<p class="muted small">${esc(s.account)}・載入中…</p>`;
+          <a class="chip" href="${esc(x.link)}" target="_blank" title="Open ${esc(x.label)} Outlook (check for mail that was not forwarded)">${esc(x.label)} Outlook ↗</a>`).join("");
+      if (!body().children.length) body().innerHTML = `<p class="muted small">${esc(s.account)} · Loading…</p>`;
       const params = new URLSearchParams({ top: 40 });
       const q = $("#mail-search").value.trim();
       if (q) params.set("q", q);
@@ -34,7 +34,7 @@ Nova.views.mail = (() => {
           <div class="mail-meta"><span>${m.important ? "⭐ " : ""}${esc(m.from)}</span><span>${m.has_attachments ? "📎 " : ""}${fmtTime(m.received)}</span></div>
           <div class="title">${esc(m.subject)}</div>
           ${m.school ? `<div class="sub"><span class="tag">${esc(m.school)}</span></div>` : ""}
-        </button>`).join("") : `<p class="muted small">${q || mailSchool || onlySchool ? "最近沒有符合的郵件" : "收件匣是空的 🎉"}</p>`);
+        </button>`).join("") : `<p class="muted small">${q || mailSchool || onlySchool ? "No matching recent mail" : "Inbox is empty 🎉"}</p>`);
     } catch (e) {
       if (req === mailReq) body().innerHTML = `<div class="notice">${esc(e.message)}</div>`;
     }
@@ -47,18 +47,18 @@ Nova.views.mail = (() => {
       if (i.dataset.id === id) i.classList.remove("unread");
     });
     const r = reader();
-    r.innerHTML = `<div class="empty"><p>載入郵件中…</p></div>`;
+    r.innerHTML = `<div class="empty"><p>Loading message…</p></div>`;
     try {
       const m = await api(`/api/mail/messages/${encodeURIComponent(id)}`);
       r.innerHTML = `
         <div class="reader-head">
           <div><h1>${esc(m.subject)}</h1>
-            <div class="muted small">${m.school ? `<span class="tag">${esc(m.school)}</span> ` : ""}${esc(m.from)}・${m.received ? new Date(m.received).toLocaleString("zh-TW") : ""}</div>
-            ${m.attachments?.length ? `<div class="muted small">📎 ${m.attachments.map(esc).join("、")}</div>` : ""}</div>
+            <div class="muted small">${m.school ? `<span class="tag">${esc(m.school)}</span> ` : ""}${esc(m.from)} · ${m.received ? new Date(m.received).toLocaleString("en-US") : ""}</div>
+            ${m.attachments?.length ? `<div class="muted small">📎 ${m.attachments.map(esc).join(", ")}</div>` : ""}</div>
           <div class="btns">
-            <button class="ghost" data-act="task">加入待辦</button>
-            <button class="ghost" data-act="vault">存到知識庫</button>
-            ${m.web_link ? `<a class="ghost" href="${esc(m.web_link)}" target="_blank">在 Gmail 開啟</a>` : ""}
+            <button class="ghost" data-act="task">Add task</button>
+            <button class="ghost" data-act="vault">Save to vault</button>
+            ${m.web_link ? `<a class="ghost" href="${esc(m.web_link)}" target="_blank">Open in Gmail</a>` : ""}
           </div>
         </div>
         <iframe sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`;
@@ -67,16 +67,16 @@ Nova.views.mail = (() => {
       $("[data-act=vault]", r).onclick = async () => {
         try {
           const res = await api(`/api/mail/messages/${encodeURIComponent(m.id)}/to-vault`, { method: "POST" });
-          toast(`已存到 ${res.path}`);
+          toast(`Saved to ${res.path}`);
           emit("vault-changed");
         } catch (err) { toast(err.message); }
       };
-      $("[data-act=task]", r).onclick = () => dialog(`<h3>從信件建立待辦</h3>
-        <label>內容<input name="text" required value="${esc(m.subject)}"></label>
-        <label>截止日<input name="due" type="date"></label>`,
+      $("[data-act=task]", r).onclick = () => dialog(`<h3>Create task from email</h3>
+        <label>Task<input name="text" required value="${esc(m.subject)}"></label>
+        <label>Due date<input name="due" type="date"></label>`,
         async (fd) => {
           await api("/api/tasks", { method: "POST", body: { text: fd.get("text"), due: fd.get("due") || null } });
-          toast("已加入待辦");
+          toast("Task added");
           emit("tasks-changed");
         });
     } catch (err) { r.innerHTML = `<div class="empty"><p>${esc(err.message)}</p></div>`; }

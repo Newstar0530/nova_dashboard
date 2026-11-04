@@ -71,19 +71,19 @@ def _matches(addr: str, pattern: str) -> bool:
 @contextmanager
 def _connect(folder: str = FOLDER, readonly: bool = True):
     if not config.GMAIL_ADDRESS or not config.GMAIL_APP_PASSWORD:
-        raise MailNotConfigured("尚未設定 GMAIL_ADDRESS / GMAIL_APP_PASSWORD，請參考 README")
+        raise MailNotConfigured("GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set; see the README")
     try:
         conn = imaplib.IMAP4_SSL(config.IMAP_HOST, 993, timeout=20)
     except OSError as e:
-        raise MailConnectionError(f"{config.IMAP_HOST}：{e}") from e
+        raise MailConnectionError(f"{config.IMAP_HOST}: {e}") from e
     try:
         try:
             conn.login(config.GMAIL_ADDRESS, config.GMAIL_APP_PASSWORD.replace(" ", ""))
         except imaplib.IMAP4.error:
-            raise MailAuthError("Gmail 登入失敗：請確認 GMAIL_ADDRESS 與 16 碼應用程式密碼，且 Gmail 已開啟兩步驟驗證")
+            raise MailAuthError("Gmail sign-in failed: check GMAIL_ADDRESS and the 16-character app password, and make sure 2-Step Verification is on")
         typ, _ = conn.select(f'"{folder}"', readonly=readonly)
         if typ != "OK":
-            raise RuntimeError(f"找不到資料夾 {folder}")
+            raise RuntimeError(f"Folder not found: {folder}")
         yield conn
     except OSError as e:  # 讀信途中斷線 / 逾時
         raise MailConnectionError(str(e)) from e
@@ -196,7 +196,7 @@ def list_messages(top: int = 40, q: str | None = None, school: str | None = None
             continue
         msgs.append({
             "id": meta["uid"],
-            "subject": str(m.get("Subject", "")).strip() or "(無主旨)",
+            "subject": str(m.get("Subject", "")).strip() or "(No subject)",
             "from": _display_from(str(m.get("From", ""))),
             "received": _iso(m.get("Date")),
             "is_read": "\\Seen" in meta["flags"],
@@ -211,13 +211,13 @@ def list_messages(top: int = 40, q: str | None = None, school: str | None = None
 
 def get_message(uid: str) -> dict:
     if not uid.isdigit():
-        raise ValueError("郵件 ID 不正確")
+        raise ValueError("Invalid message ID")
     with _connect(readonly=False) as conn:  # 用 BODY[]（非 PEEK）讀取 → 標為已讀
         extra = " X-GM-MSGID" if _is_gmail() else ""
         typ, data = conn.uid("FETCH", uid, f"(UID{extra} BODY[])")
     parsed = _parse_fetch(data)
     if not parsed:
-        raise ValueError("找不到這封信")
+        raise ValueError("Message not found")
     meta, raw = parsed[0]
     m = email.message_from_bytes(raw, policy=default_policy)
     body_part = m.get_body(preferencelist=("html", "plain"))
@@ -230,14 +230,14 @@ def get_message(uid: str) -> dict:
         body_type = "html" if body_part.get_content_type() == "text/html" else "text"
     return {
         "id": meta["uid"],
-        "subject": str(m.get("Subject", "")).strip() or "(無主旨)",
+        "subject": str(m.get("Subject", "")).strip() or "(No subject)",
         "from": str(m.get("From", "")),
         "to": str(m.get("To", "")),
         "received": _iso(m.get("Date")),
         "school": _school_of(m),
         "body_html": body,
         "body_type": body_type,
-        "attachments": [a.get_filename() or "附件" for a in m.iter_attachments()],
+        "attachments": [a.get_filename() or "attachment" for a in m.iter_attachments()],
         "web_link": _gmail_link(meta["msgid"]),
     }
 

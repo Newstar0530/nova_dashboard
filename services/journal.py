@@ -156,7 +156,7 @@ def settings() -> dict:
 def save_settings(habits: list[str], subjects: list[str]) -> dict:
     clean = lambda xs: list(dict.fromkeys(x.strip() for x in xs if x and x.strip()))
     fm = {"habits": clean(habits), "subjects": clean(subjects)}
-    body = "# 紀錄設定\n\n工作台的習慣打卡項目與學習科目，可在工作台或這裡修改。\n"
+    body = "# Record settings\n\nHabit check-in items and study subjects for the dashboard. Edit them in the dashboard or here.\n"
     with _lock:
         p = _settings_path()
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -172,7 +172,7 @@ def get_day(d: date) -> dict:
 
 def set_mood(d: date, mood: int | None) -> dict:
     if mood is not None and not 1 <= mood <= 5:
-        raise ValueError("心情分數要在 1–5 之間")
+        raise ValueError("Mood must be between 1 and 5")
     with _lock:
         fm, body, _ = _load(d)
         if mood is None:
@@ -206,7 +206,7 @@ def set_habit(d: date, habit: str, done: bool) -> dict:
 def add_study(d: date, subject: str, minutes: int, start: str | None = None, note: str = "") -> dict:
     subject = subject.strip() or "其他"
     if not 1 <= minutes <= 24 * 60:
-        raise ValueError("分鐘數不正確")
+        raise ValueError("Invalid number of minutes")
     with _lock:
         fm, body, _ = _load(d)
         study = fm.get("study") if isinstance(fm.get("study"), dict) else {}

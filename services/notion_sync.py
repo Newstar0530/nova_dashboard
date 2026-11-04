@@ -30,7 +30,7 @@ class NotionNotConfigured(Exception):
 
 def _client() -> httpx.Client:
     if not config.NOTION_TOKEN or not config.NOTION_DATABASE_ID:
-        raise NotionNotConfigured("尚未設定 NOTION_TOKEN / NOTION_DATABASE_ID，請參考 README")
+        raise NotionNotConfigured("NOTION_TOKEN / NOTION_DATABASE_ID not set; see the README")
     return httpx.Client(
         base_url=API,
         headers={
@@ -326,12 +326,12 @@ def _adopt_existing(state: dict) -> dict:
 def sync(force: bool = False) -> dict:
     if _progress["running"]:
         return status()
-    _progress.update(running=True, message="同步中…", synced=0, skipped=0, errors=[])
+    _progress.update(running=True, message="Syncing…", synced=0, skipped=0, errors=[])
     try:
         with _client() as client, _state_lock:
             state = _adopt_existing(_load_state())
             pages = _query_database(client)
-            _progress["message"] = f"共 {len(pages)} 頁"
+            _progress["message"] = f"{len(pages)} pages"
             for page in pages:
                 if page.get("archived") or page.get("in_trash"):
                     continue
@@ -377,12 +377,12 @@ def sync(force: bool = False) -> dict:
                     _progress["synced"] += 1
                 except Exception as e:  # 單頁失敗不影響其他頁
                     _progress["errors"].append(f"{pid}: {e}")
-            _progress["message"] = f"完成：更新 {_progress['synced']} 頁，略過 {_progress['skipped']} 頁"
+            _progress["message"] = f"Done: {_progress['synced']} updated, {_progress['skipped']} skipped"
         links.rebuild_course_hubs()  # 課程首頁跟著更新
     except httpx.HTTPStatusError as e:
-        _progress["message"] = f"Notion API 錯誤 {e.response.status_code}：{e.response.text[:200]}"
+        _progress["message"] = f"Notion API error {e.response.status_code}: {e.response.text[:200]}"
     except Exception as e:
-        _progress["message"] = f"錯誤：{e}"
+        _progress["message"] = f"Error: {e}"
     finally:
         _progress["running"] = False
         _progress["last_run"] = datetime.now().isoformat(timespec="seconds")

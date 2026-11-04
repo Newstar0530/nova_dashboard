@@ -68,7 +68,7 @@ async def _mail_auth(_req, exc):
 @app.exception_handler(imaplib.IMAP4.error)
 @app.exception_handler(mail.MailConnectionError)
 async def _imap_error(_req, exc):
-    return JSONResponse({"detail": f"連線郵件伺服器失敗：{exc}"}, status_code=502)
+    return JSONResponse({"detail": f"Could not connect to the mail server: {exc}"}, status_code=502)
 
 
 @app.exception_handler(tasks.TaskNotFound)
@@ -79,7 +79,7 @@ async def _task_missing(_req, exc):
 
 @app.exception_handler(httpx.HTTPStatusError)
 async def _upstream(_req, exc: httpx.HTTPStatusError):
-    return JSONResponse({"detail": f"外部服務錯誤 {exc.response.status_code}: {exc.response.text[:300]}"}, status_code=502)
+    return JSONResponse({"detail": f"External service error {exc.response.status_code}: {exc.response.text[:300]}"}, status_code=502)
 
 
 @app.get("/")
@@ -114,7 +114,7 @@ def vault_recent(limit: int = 12):
 def vault_note(path: str):
     p = vault.safe_path(path)
     if not p.is_file():
-        raise HTTPException(404, "找不到筆記")
+        raise HTTPException(404, "Note not found")
     return vault.read_note(path)
 
 
@@ -139,13 +139,51 @@ class Capture(BaseModel):
 @app.post("/api/vault/capture")
 def vault_capture(body: Capture):
     if not body.text.strip():
-        raise HTTPException(400, "內容不可空白")
+        raise HTTPException(400, "Content cannot be empty")
     return vault.capture(body.text, body.title or None)
 
 
 @app.delete("/api/vault/note")
 def vault_delete(path: str):
     return vault.trash_note(path)
+
+
+class NoteSave(BaseModel):
+    path: str
+    content: str
+    mtime: str | None = None
+    force: bool = False
+
+
+@app.put("/api/vault/note")
+def vault_save(body: NoteSave):
+    try:
+        return vault.save_note(body.path, body.content, body.mtime, body.force)
+    except FileNotFoundError:
+        raise HTTPException(404, "Note not found")
+    except vault.Conflict:
+        raise HTTPException(409, "This note was changed somewhere else (e.g. in Obsidian) after you opened it")
+
+
+class NoteCreate(BaseModel):
+    folder: str = ""
+    title: str
+    template: str | None = None
+
+
+@app.post("/api/vault/note")
+def vault_create(body: NoteCreate):
+    return vault.create_note(body.folder, body.title, body.template or None)
+
+
+@app.get("/api/vault/folders")
+def vault_folders():
+    return vault.folders()
+
+
+@app.get("/api/vault/templates")
+def vault_templates():
+    return vault.templates()
 
 
 # ---------- Inbox（快速記錄） ----------
@@ -204,7 +242,7 @@ def notion_status():
 @app.post("/api/notion/sync")
 def notion_sync_now(force: bool = False):
     if not notion_sync.status()["configured"]:
-        raise notion_sync.NotionNotConfigured("尚未設定 NOTION_TOKEN / NOTION_DATABASE_ID，請參考 README")
+        raise notion_sync.NotionNotConfigured("NOTION_TOKEN / NOTION_DATABASE_ID not set; see the README")
     notion_sync.sync_in_background(force)
     return {"started": True}
 
@@ -276,7 +314,7 @@ def calendar_status():
 def calendar_events(start: str, end: str, refresh: bool = False):
     s, e = date.fromisoformat(start), date.fromisoformat(end)
     if not s < e or (e - s).days > 62:
-        raise ValueError("日期範圍不正確（最多 62 天）")
+        raise ValueError("Invalid date range (max 62 days)")
     result = calendar_feed.events(s, e, refresh)
     result["tasks"] = tasks.due_between(s, e)
     return result

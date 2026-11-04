@@ -305,7 +305,7 @@ def add_task(text: str, due: str | None = None, priority: str | None = None, sch
     tags = list(dict.fromkeys(TAG_RE.findall(text)))
     title = TAG_RE.sub("", text).strip() or text
     if not title:
-        raise ValueError("待辦內容不可空白")
+        raise ValueError("Task text cannot be empty")
     defaults = s.get("taskCreationDefaults") or {}
     if not scheduled and defaults.get("defaultScheduledDate") == "today":
         scheduled = date.today().isoformat()
@@ -343,10 +343,10 @@ def _load(task_id: str):
     s = settings()
     p = vault.safe_path(task_id)
     if not p.exists() or not task_id.endswith(".md"):
-        raise TaskNotFound("找不到這項待辦（可能已在 Obsidian 被移動或刪除），請重新整理")
+        raise TaskNotFound("Task not found (it may have been moved or deleted in Obsidian); please refresh")
     parsed = _split(p.read_text(encoding="utf-8"))
     if not parsed or not _is_task(parsed[0], s):
-        raise TaskNotFound("這篇筆記不是 TaskNotes 待辦")
+        raise TaskNotFound("This note is not a TaskNotes task")
     return s, p, parsed[0], parsed[1]
 
 
@@ -399,7 +399,7 @@ def update_task(task_id: str, text: str | None = None, done: bool | None = None,
         if text is not None:
             title = TAG_RE.sub("", text.replace("\n", " ")).strip()
             if not title:
-                raise ValueError("待辦內容不可空白")
+                raise ValueError("Task text cannot be empty")
             if s["storeTitleInFilename"]:
                 folder = task_id.rsplit("/", 1)[0] if "/" in task_id else ""
                 new_id = _unique(folder, _safe_title(title), current=task_id)

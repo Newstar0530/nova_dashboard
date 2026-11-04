@@ -47,8 +47,8 @@ const Charts = (() => {
     const offset = (first.getDay() + 6) % 7; // 週一為第一列
     const weeks = Math.ceil((days.length + offset) / 7);
     const W = LEFT + weeks * (CELL + GAP), H = TOP + 7 * (CELL + GAP);
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `${habit} 打卡熱度圖` }, container);
-    ["一", "", "三", "", "五", "", "日"].forEach((l, r) => l && el("text", { x: 0, y: TOP + r * (CELL + GAP) + CELL - 2, class: "ax" }, svg).append(l));
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `${habit} check-in heatmap` }, container);
+    ["Mon", "", "Wed", "", "Fri", "", "Sun"].forEach((l, r) => l && el("text", { x: 0, y: TOP + r * (CELL + GAP) + CELL - 2, class: "ax" }, svg).append(l));
     let lastMonth = -1;
     const t = tip(container);
     days.forEach((d, i) => {
@@ -57,7 +57,7 @@ const Charts = (() => {
       const date = parseISO(d.date);
       if (row === 0 || i === 0) {
         if (date.getMonth() !== lastMonth && date.getDate() <= 7) {
-          el("text", { x, y: 9, class: "ax" }, svg).append(`${date.getMonth() + 1}月`);
+          el("text", { x, y: 9, class: "ax" }, svg).append(date.toLocaleDateString("en-US", { month: "short" }));
           lastMonth = date.getMonth();
         }
       }
@@ -65,7 +65,7 @@ const Charts = (() => {
       const r = el("rect", { x, y, width: CELL, height: CELL, rx: 3, fill: done ? HEAT_ON : HEAT_OFF, class: "cell" }, svg);
       r.addEventListener("pointerenter", () => {
         const box = container.getBoundingClientRect(), rb = r.getBoundingClientRect();
-        t.show(`<b>${fmtDay(d.date)}</b><br>${done ? "✓ 已完成" : "— 未完成"}`, rb.left - box.left + CELL / 2, rb.top - box.top);
+        t.show(`<b>${fmtDay(d.date)}</b><br>${done ? "✓ Done" : "— Not done"}`, rb.left - box.left + CELL / 2, rb.top - box.top);
       });
       r.addEventListener("pointerleave", () => t.hide());
     });
@@ -79,14 +79,14 @@ const Charts = (() => {
     const iw = W - M.l - M.r, ih = H - M.t - M.b;
     const x = (i) => M.l + (days.length === 1 ? iw / 2 : (i / (days.length - 1)) * iw);
     const y = (v) => M.t + ih - ((v - 1) / 4) * ih;
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "近 30 天心情折線圖" }, container);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "Mood over the last 30 days, line chart" }, container);
     for (let v = 1; v <= 5; v++) {
       el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: "grid" }, svg);
       el("text", { x: M.l - 8, y: y(v) + 4, class: "ax", "text-anchor": "end" }, svg).append(v);
     }
     days.forEach((d, i) => {
       if (i % 7 === days.length % 7 || i === days.length - 1) {
-        el("text", { x: x(i), y: H - 6, class: "ax", "text-anchor": "middle" }, svg).append(fmtDay(d.date).split("（")[0]);
+        el("text", { x: x(i), y: H - 6, class: "ax", "text-anchor": "middle" }, svg).append(fmtMD(d.date));
       }
     });
     // 折線：遇到空值就斷開
@@ -100,7 +100,7 @@ const Charts = (() => {
     days.forEach((d, i) => d.mood != null && el("circle", { cx: x(i), cy: y(d.mood), r: 4, fill: MOOD_LINE, stroke: SURFACE, "stroke-width": 2 }, svg));
 
     if (!days.some((d) => d.mood != null)) {
-      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("還沒有心情紀錄，從「今天」頁開始打卡吧");
+      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No mood logged yet. Check in on the Today page");
     }
 
     // 十字線 + tooltip
@@ -116,12 +116,12 @@ const Charts = (() => {
       cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.classList.add("on");
       if (d.mood != null) { dot.setAttribute("cx", x(i)); dot.setAttribute("cy", y(d.mood)); dot.classList.add("on"); }
       else dot.classList.remove("on");
-      const label = d.mood != null ? `心情 <b>${d.mood}</b> / 5 ${MOODS[d.mood - 1]}` : "沒有紀錄";
+      const label = d.mood != null ? `Mood <b>${d.mood}</b> / 5 ${MOODS[d.mood - 1]}` : "No entry";
       t.show(`<b>${fmtDay(d.date)}</b><br>${label}`, (x(i) / W) * r.width, ((d.mood != null ? y(d.mood) : M.t + ih / 2) / H) * r.height);
     });
     hit.addEventListener("pointerleave", () => { cross.classList.remove("on"); dot.classList.remove("on"); t.hide(); });
 
-    container.appendChild(table(["日期", "心情"], days.filter((d) => d.mood != null).map((d) => [fmtDay(d.date), `${d.mood} ${MOODS[d.mood - 1]}`])));
+    container.appendChild(table(["Date", "Mood"], days.filter((d) => d.mood != null).map((d) => [fmtDay(d.date), `${d.mood} ${MOODS[d.mood - 1]}`])));
   }
 
   // ---------- 學習時數：每日堆疊長條（依科目） ----------
@@ -147,7 +147,7 @@ const Charts = (() => {
     const top = Math.ceil(maxMin / 60 / stepH) * stepH * 60;
     const y = (m) => M.t + ih - (m / top) * ih;
     const band = iw / days.length, bw = Math.min(26, band * 0.62);
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "近 14 天學習時數" }, container);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "Study time over the last 14 days" }, container);
     for (let h = 0; h <= top / 60 + 1e-9; h += stepH) {
       el("line", { x1: M.l, x2: W - M.r, y1: y(h * 60), y2: y(h * 60), class: h === 0 ? "base" : "grid" }, svg);
       el("text", { x: M.l - 6, y: y(h * 60) + 4, class: "ax", "text-anchor": "end" }, svg).append(h === 0 ? "0" : `${h}h`);
@@ -155,7 +155,7 @@ const Charts = (() => {
     const t = tip(container);
     days.forEach((d, i) => {
       const cx = M.l + band * i + band / 2;
-      if (i % 2 === (days.length - 1) % 2) el("text", { x: cx, y: H - 6, class: "ax", "text-anchor": "middle" }, svg).append(fmtDay(d.date).split("（")[0]);
+      if (i % 2 === (days.length - 1) % 2) el("text", { x: cx, y: H - 6, class: "ax", "text-anchor": "middle" }, svg).append(fmtMD(d.date));
       const segs = order.filter((s) => d.study[s]);
       let acc = 0;
       segs.forEach((s, k) => {
@@ -172,17 +172,17 @@ const Charts = (() => {
       const hit = el("rect", { x: cx - band / 2, y: M.t, width: band, height: ih, fill: "transparent", class: "bar-hit" }, svg);
       hit.addEventListener("pointerenter", () => {
         const r = svg.getBoundingClientRect();
-        const rows = segs.map((s) => `<span class="tip-row"><i style="background:${color(s)}"></i>${esc(s)}<b>${d.study[s]} 分</b></span>`).join("");
-        t.show(`<b>${fmtDay(d.date)}</b>${rows || "<br>沒有紀錄"}${segs.length > 1 ? `<span class="tip-row total">合計<b>${d.study_total} 分</b></span>` : ""}`,
+        const rows = segs.map((s) => `<span class="tip-row"><i style="background:${color(s)}"></i>${esc(s)}<b>${d.study[s]} min</b></span>`).join("");
+        t.show(`<b>${fmtDay(d.date)}</b>${rows || "<br>No entry"}${segs.length > 1 ? `<span class="tip-row total">Total<b>${d.study_total} min</b></span>` : ""}`,
           (cx / W) * r.width, (y(d.study_total) / H) * r.height + (container.querySelector(".legend")?.offsetHeight || 0));
         hit.classList.add("on");
       });
       hit.addEventListener("pointerleave", () => { t.hide(); hit.classList.remove("on"); });
     });
     if (!days.some((d) => d.study_total)) {
-      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("還沒有學習紀錄，用「專注計時」開始吧");
+      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No study time logged yet. Start with the Focus timer");
     }
-    container.appendChild(table(["日期", ...order, "合計"],
+    container.appendChild(table(["Date", ...order, "Total"],
       days.filter((d) => d.study_total).map((d) => [fmtDay(d.date), ...order.map((s) => d.study[s] || ""), d.study_total])));
   }
 
@@ -190,9 +190,9 @@ const Charts = (() => {
   function table(head, rows) {
     const det = document.createElement("details");
     det.className = "chart-table";
-    det.innerHTML = `<summary>以表格檢視</summary>` + (rows.length
+    det.innerHTML = `<summary>View as table</summary>` + (rows.length
       ? `<table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
-      : `<p class="muted small">沒有資料</p>`);
+      : `<p class="muted small">No data</p>`);
     return det;
   }
 

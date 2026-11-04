@@ -21,7 +21,7 @@ def sources() -> list[dict]:
         if not item:
             continue
         if re.match(r"^(https?|webcal)://", item, re.I):  # 只有網址（網址本身可能含 =，不能拿來切）
-            label, url = "行事曆", item
+            label, url = "Calendar", item
         elif "=" in item:
             label, url = (s.strip() for s in item.split("=", 1))
         else:
@@ -65,7 +65,7 @@ def _event(ev, label: str) -> dict:
         end = _local(end) if isinstance(end, datetime) else start + timedelta(hours=1)
         start_s, end_s = start.isoformat(timespec="minutes"), end.isoformat(timespec="minutes")
     return {
-        "title": str(ev.get("SUMMARY", "")).strip() or "(無標題)",
+        "title": str(ev.get("SUMMARY", "")).strip() or "(No title)",
         "start": start_s,
         "end": end_s,
         "all_day": all_day,
@@ -85,6 +85,6 @@ def events(start: date, end: date, refresh: bool = False) -> dict:
                     continue
                 out.append(_event(ev, src["label"]))
         except (httpx.HTTPError, ValueError) as e:
-            errors.append(f"{src['label']}：{e}")
+            errors.append(f"{src['label']}: {e}")
     out.sort(key=lambda e: (e["start"][:10], not e["all_day"], e["start"]))
     return {"events": out, "errors": errors}

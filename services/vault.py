@@ -22,7 +22,7 @@ def safe_path(rel: str) -> Path:
     """把相對路徑轉成 vault 內的絕對路徑，阻擋 ../ 跳脫。"""
     p = (config.VAULT_PATH / rel).resolve()
     if p != config.VAULT_PATH and config.VAULT_PATH not in p.parents:
-        raise ValueError("路徑不在 vault 內")
+        raise ValueError("Path is outside the vault")
     return p
 
 
@@ -32,7 +32,8 @@ def rel(p: Path) -> str:
 
 def iter_notes():
     for p in config.VAULT_PATH.rglob("*.md"):
-        if not SKIP_DIRS.intersection(p.relative_to(config.VAULT_PATH).parts):
+        # 跳過 .obsidian、.trash、.git、.claude 等隱藏資料夾
+        if not any(part.startswith(".") for part in p.relative_to(config.VAULT_PATH).parts):
             yield p
 
 
@@ -110,7 +111,100 @@ def read_note(rel_path: str) -> dict:
         "frontmatter": fm.group(0) if fm else "",
         "html": _render(text),
         "obsidian_uri": obsidian_uri(rel(p)),
+        "editable": not _is_synced(text),
+        "mtime": str(p.stat().st_mtime_ns),
     }
+
+
+# ---------- 編輯、新增 ----------
+
+class Conflict(Exception):
+    """筆記在載入後被別的地方（例如 Obsidian）改過。"""
+
+
+def _is_synced(text: str) -> bool:
+    # Notion 同步來的筆記，下次同步會被覆蓋，所以不開放在工作台編輯
+    fm = FRONTMATTER.match(text)
+    return bool(fm and re.search(r"^notion_id:", fm.group(0), re.M))
+
+
+def _editable_md(p: Path) -> None:
+    if p.suffix != ".md":
+        raise ValueError("Only Markdown notes can be edited")
+    if SKIP_DIRS.intersection(p.relative_to(config.VAULT_PATH).parts):
+        raise ValueError("Files in system folders cannot be edited")
+
+
+def save_note(rel_path: str, content: str, mtime: str | None = None, force: bool = False) -> dict:
+    p = safe_path(rel_path)
+    _editable_md(p)
+    if not p.is_file():
+        raise FileNotFoundError(rel_path)
+    current = p.read_text(encoding="utf-8")
+    if _is_synced(current):
+        raise ValueError("Notes synced from Notion can't be edited here — edit them in Notion")
+    if not force and mtime and str(p.stat().st_mtime_ns) != mtime:
+        raise Conflict(rel_path)
+    p.write_text(content, encoding="utf-8")
+    return read_note(rel(p))
+
+
+def folders() -> list[str]:
+    """vault 裡所有資料夾（含空的），給新增筆記選位置用。"""
+    out = [""]
+    for d in sorted(config.VAULT_PATH.rglob("*"), key=lambda x: rel(x).lower()):
+        if d.is_dir() and not any(part.startswith(".") for part in d.relative_to(config.VAULT_PATH).parts):
+            out.append(rel(d))
+    return out
+
+
+TEMPLATE_DIRS = {"範本", "templates", "Templates"}
+
+
+def templates() -> list[dict]:
+    """名為「範本 / Templates」的資料夾裡的筆記。"""
+    return [
+        {"path": rel(p), "name": p.stem}
+        for p in sorted(iter_notes(), key=lambda x: rel(x).lower())
+        if p.parent.name in TEMPLATE_DIRS
+    ]
+
+
+MOMENT = [("YYYY", "%Y"), ("MM", "%m"), ("DD", "%d"), ("HH", "%H"), ("mm", "%M"), ("ss", "%S")]
+TP_DATE = re.compile(r"<%\s*tp\.date\.now\(\s*[\"']([^\"']*)[\"']\s*\)\s*%>")
+TP_TITLE = re.compile(r"<%\s*tp\.file\.title\s*%>")
+
+
+def _fill_template(text: str, title: str) -> str:
+    """替換最常用的 Templater 語法：日期與標題；其他的原樣保留。"""
+    now = datetime.now()
+
+    def date(m):
+        fmt = m.group(1) or "YYYY-MM-DD"
+        for token, code in MOMENT:
+            fmt = fmt.replace(token, code)
+        return now.strftime(fmt)
+
+    return TP_TITLE.sub(lambda _: title, TP_DATE.sub(date, text))
+
+
+def create_note(folder: str, title: str, template: str | None = None) -> dict:
+    title = title.strip()
+    if not title:
+        raise ValueError("Title cannot be empty")
+    d = safe_path(folder)
+    if any(part.startswith(".") for part in d.relative_to(config.VAULT_PATH).parts):
+        raise ValueError("Can't create notes in system folders")
+    content = ""
+    if template:
+        t = safe_path(template)
+        if not t.is_file() or t.suffix != ".md":
+            raise ValueError("Template not found")
+        content = _fill_template(t.read_text(encoding="utf-8"), title)
+    d.mkdir(parents=True, exist_ok=True)
+    p = unique_path(d / f"{sanitize_filename(title)}.md")
+    p.write_text(content, encoding="utf-8")
+    return read_note(rel(p))
 
 
 def search(q: str, limit: int = 40) -> list[dict]:
@@ -165,9 +259,9 @@ def trash_note(rel_path: str) -> dict:
     """把筆記移到 vault 的 .trash（Obsidian 的垃圾桶），可在 Obsidian 還原；不是真的刪除。"""
     p = safe_path(rel_path)
     if not p.is_file() or p.suffix != ".md":
-        raise ValueError("只能刪除 vault 裡的 Markdown 筆記")
+        raise ValueError("Only Markdown notes in the vault can be deleted")
     if SKIP_DIRS.intersection(p.relative_to(config.VAULT_PATH).parts):
-        raise ValueError("不能刪除系統資料夾裡的檔案")
+        raise ValueError("Files in system folders cannot be deleted")
     trash = config.VAULT_PATH / ".trash"
     trash.mkdir(exist_ok=True)
     target = unique_path(trash / p.name)

@@ -10,13 +10,13 @@ Nova.views.today = (() => {
     try {
       const st = await api("/api/calendar/status");
       if (!st.configured) {
-        body.innerHTML = `<div class="notice">尚未訂閱行事曆。<br>在 <code>.env</code> 填入 <code>CALENDAR_ICS</code>（學校 Outlook 的 ICS 網址，步驟見 README）。</div>`;
+        body.innerHTML = `<div class="notice">No calendar subscribed yet.<br>Set <code>CALENDAR_ICS</code> in <code>.env</code> (your school Outlook ICS URL; see the README for steps).</div>`;
         return;
       }
       const r = await api(`/api/calendar/events?start=${start}&end=${end}`);
-      const groups = [[start, "今天"], [isoDate(addDays(new Date(), 1)), "明天"]].map(([d, label]) => {
+      const groups = [[start, "Today"], [isoDate(addDays(new Date(), 1)), "Tomorrow"]].map(([d, label]) => {
         const evs = r.events.filter((e) => e.start.slice(0, 10) <= d && (e.all_day ? e.end > d : e.start.slice(0, 10) === d));
-        return `<div class="sched-day">${label}</div>` + (evs.length ? evs.map(eventRow).join("") : `<p class="muted small">沒有行程</p>`);
+        return `<div class="sched-day">${label}</div>` + (evs.length ? evs.map(eventRow).join("") : `<p class="muted small">No events</p>`);
       }).join("");
       body.innerHTML = groups + (r.errors.length ? `<p class="muted small">⚠ ${r.errors.map(esc).join("<br>")}</p>` : "");
     } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
@@ -26,7 +26,7 @@ Nova.views.today = (() => {
     const now = new Date();
     const live = !e.all_day && new Date(e.start) <= now && now < new Date(e.end);
     return `<div class="event${live ? " live" : ""}">
-      <span class="ev-time">${e.all_day ? "全天" : `${hhmm(e.start)}<br><span>${hhmm(e.end)}</span>`}</span>
+      <span class="ev-time">${e.all_day ? "All day" : `${hhmm(e.start)}<br><span>${hhmm(e.end)}</span>`}</span>
       <span class="ev-main"><b>${esc(e.title)}</b>${e.location ? `<span class="muted small">📍 ${esc(e.location)}</span>` : ""}</span>
       <span class="tag">${esc(e.source)}</span></div>`;
   };
@@ -44,16 +44,16 @@ Nova.views.today = (() => {
       const today = todayISO();
       const when = (t) => t.due || t.scheduled;
       const groups = [
-        ["逾期", list.filter((t) => !t.done && t.due && t.due < today)],
-        ["今天", list.filter((t) => !t.done && !(t.due && t.due < today) && when(t) && when(t) <= today)],
-        ["接下來", list.filter((t) => !t.done && when(t) > today)],
-        ["沒有日期", list.filter((t) => !t.done && !when(t))],
-        ["已完成", list.filter((t) => t.done)],
+        ["Overdue", list.filter((t) => !t.done && t.due && t.due < today)],
+        ["Today", list.filter((t) => !t.done && !(t.due && t.due < today) && when(t) && when(t) <= today)],
+        ["Upcoming", list.filter((t) => !t.done && when(t) > today)],
+        ["No date", list.filter((t) => !t.done && !when(t))],
+        ["Completed", list.filter((t) => t.done)],
       ].filter(([, ts]) => ts.length);
-      body.innerHTML = (taskMeta.installed ? "" : `<div class="notice">沒有偵測到 TaskNotes 外掛，使用預設設定（待辦存在 <code>TaskNotes/Tasks</code>）。</div>`) +
+      body.innerHTML = (taskMeta.installed ? "" : `<div class="notice">TaskNotes plugin not detected; using default settings (tasks are stored in <code>TaskNotes/Tasks</code>).</div>`) +
         (groups.length
-          ? groups.map(([label, ts]) => `<div class="task-group${label === "逾期" ? " overdue" : ""}">${label} <span>${ts.length}</span></div>` + ts.map(taskRow).join("")).join("")
-          : `<p class="muted small">沒有待辦，好好休息 ✦</p>`);
+          ? groups.map(([label, ts]) => `<div class="task-group${label === "Overdue" ? " overdue" : ""}">${label} <span>${ts.length}</span></div>` + ts.map(taskRow).join("")).join("")
+          : `<p class="muted small">No tasks. Enjoy the break ✦</p>`);
       emit("tasks-changed");
     } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
   }
@@ -62,22 +62,22 @@ Nova.views.today = (() => {
     const p = prioOf(t.priority), st = statusOf(t.status);
     const tags = t.tags.map((g) => `<span class="tag">#${esc(g)}</span>`).join(" ");
     let date = "";
-    if (t.due) date = `<span class="due${!t.done && t.due < todayISO() ? " late" : ""}" title="截止日">${dueLabel(t.due)}${t.due_time ? " " + t.due_time : ""}</span>`;
-    else if (t.recurring) date = `<span class="due" title="重複待辦（依 TaskNotes 的重複規則）">重複</span>`;
+    if (t.due) date = `<span class="due${!t.done && t.due < todayISO() ? " late" : ""}" title="Due date">${dueLabel(t.due)}${t.due_time ? " " + t.due_time : ""}</span>`;
+    else if (t.recurring) date = `<span class="due" title="Recurring task (follows the TaskNotes recurrence rule)">Recurring</span>`;
     else if (t.scheduled) {
       // 排程日只是「打算哪天做」，過了不算逾期，直接顯示日期
-      const label = t.scheduled < todayISO() ? fmtDay(t.scheduled).split("（")[0] : dueLabel(t.scheduled);
-      date = `<span class="due" title="排程日">⏱ ${label}</span>`;
+      const label = t.scheduled < todayISO() ? fmtMD(t.scheduled) : dueLabel(t.scheduled);
+      date = `<span class="due" title="Scheduled date">⏱ ${label}</span>`;
     }
     return `<div class="task${t.done ? " done" : ""}" data-id="${esc(t.id)}">
-      <button class="check" aria-label="${t.done ? "標為未完成" : "完成"}" style="${p && !t.done ? `border-color:${p.color}` : ""}">${t.done ? "✓" : ""}</button>
-      <span class="task-text">${t.recurring ? '<span class="rec" title="重複待辦">↻</span> ' : ""}${esc(t.text)}
+      <button class="check" aria-label="${t.done ? "Mark as not done" : "Mark as done"}" style="${p && !t.done ? `border-color:${p.color}` : ""}">${t.done ? "✓" : ""}</button>
+      <span class="task-text">${t.recurring ? '<span class="rec" title="Recurring task">↻</span> ' : ""}${esc(t.text)}
         ${st && !st.isCompleted && t.status !== taskMeta.statuses[0]?.value ? `<span class="tag status" style="--c:${st.color}">${esc(st.label)}</span>` : ""}
         ${courseOf(t) ? `<span class="tag course-tag">${esc(courseOf(t))}</span>` : ""}
         ${tags}</span>
       ${date}
-      <a class="open-obs" href="${esc(t.obsidian_uri)}" title="在 Obsidian 開啟（寫詳細內容）">↗</a>
-      <button class="del" title="移到 Obsidian 垃圾桶">✕</button></div>`;
+      <a class="open-obs" href="${esc(t.obsidian_uri)}" title="Open in Obsidian (add details)">↗</a>
+      <button class="del" title="Move to Obsidian trash">✕</button></div>`;
   };
 
   // 待辦 id 是 vault 內路徑：逐段編碼
@@ -88,18 +88,18 @@ Nova.views.today = (() => {
       taskMeta = m;
       $("#task-prio").innerHTML = m.priorities.map((p) => `<option value="${esc(p.value)}">${esc(p.label)}</option>`).join("");
       $("#task-prio").value = m.priorities.find((p) => p.value === "normal")?.value || m.priorities[0]?.value || "";
-      $("#task-course").innerHTML = `<option value="">不分課程</option>` + m.courses.map((c) => `<option>${esc(c)}</option>`).join("");
+      $("#task-course").innerHTML = `<option value="">No course</option>` + m.courses.map((c) => `<option>${esc(c)}</option>`).join("");
       $("#task-course").hidden = !m.courses.length;
       loadTasks();
     }).catch(() => {});
     $("#task-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = $("#task-text").value.trim();
-      if (!text) return needInput($("#task-text"), "先輸入待辦內容");
+      if (!text) return needInput($("#task-text"), "Enter a task first");
       try {
         await api("/api/tasks", { method: "POST", body: { text, due: $("#task-due").value || null, priority: $("#task-prio").value || null, project: $("#task-course").value || null } });
         $("#task-text").value = ""; $("#task-due").value = "";
-        toast(`已新增待辦：${text}`);
+        toast(`Task added: ${text}`);
         loadTasks();
       } catch (err) { toast(err.message); }
     });
@@ -111,10 +111,10 @@ Nova.views.today = (() => {
         if (e.target.closest(".check")) {
           row.classList.toggle("done");
           await api(taskUrl(row.dataset.id), { method: "PATCH", body: { done: row.classList.contains("done") } });
-          if (row.classList.contains("done")) toast("完成 ✓");
+          if (row.classList.contains("done")) toast("Done ✓");
         } else if (e.target.closest(".del")) {
           await api(taskUrl(row.dataset.id), { method: "DELETE" });
-          toast("已移到 Obsidian 垃圾桶（.trash）");
+          toast("Moved to Obsidian trash (.trash)");
         } else if (e.target.closest(".task-text")) {
           return editTask(row.dataset.id);
         } else return;
@@ -127,19 +127,19 @@ Nova.views.today = (() => {
     const t = (await api("/api/tasks?include_done=true")).find((x) => x.id === id);
     if (!t) return loadTasks();
     const opts = (xs, cur) => xs.map((x) => `<option value="${esc(x.value)}"${x.value === cur ? " selected" : ""}>${esc(x.label)}</option>`).join("");
-    dialog(`<h3>編輯待辦</h3>
-      <label>標題<input name="text" required value="${esc(t.text)}"></label>
+    dialog(`<h3>Edit task</h3>
+      <label>Title<input name="text" required value="${esc(t.text)}"></label>
       <div class="dlg-row">
-        <label>狀態<select name="status"${t.recurring ? " disabled" : ""}>${opts(taskMeta.statuses, t.status)}</select></label>
-        <label>優先度<select name="priority">${opts(taskMeta.priorities, t.priority)}</select></label>
+        <label>Status<select name="status"${t.recurring ? " disabled" : ""}>${opts(taskMeta.statuses, t.status)}</select></label>
+        <label>Priority<select name="priority">${opts(taskMeta.priorities, t.priority)}</select></label>
       </div>
-      ${taskMeta.courses.length ? `<label>課程（連到課程首頁）<select name="course"><option value="">不分課程</option>${taskMeta.courses.map((c) => `<option${c === courseOf(t) ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
+      ${taskMeta.courses.length ? `<label>Course (links to the course home page)<select name="course"><option value="">No course</option>${taskMeta.courses.map((c) => `<option${c === courseOf(t) ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
       <div class="dlg-row">
-        <label>截止日<input name="due" type="date" value="${t.due || ""}"></label>
-        <label>排程日<input name="scheduled" type="date" value="${t.scheduled || ""}"></label>
+        <label>Due date<input name="due" type="date" value="${t.due || ""}"></label>
+        <label>Scheduled<input name="scheduled" type="date" value="${t.scheduled || ""}"></label>
       </div>
-      ${t.recurring ? `<p class="muted small">↻ 重複待辦：勾選只會完成今天這一次，重複規則請在 Obsidian 修改。</p>` : ""}
-      <a class="link-btn" href="${esc(t.obsidian_uri)}">↗ 在 Obsidian 開啟，寫作業說明、連結等詳細內容</a>`,
+      ${t.recurring ? `<p class="muted small">↻ Recurring task: checking it off only completes today's instance. Edit the recurrence rule in Obsidian.</p>` : ""}
+      <a class="link-btn" href="${esc(t.obsidian_uri)}">↗ Open in Obsidian to add details like assignment notes and links</a>`,
       async (fd) => {
         const due = fd.get("due"), scheduled = fd.get("scheduled");
         const body = { priority: fd.get("priority"), due: due || null, clear_due: !due, scheduled: scheduled || null, clear_scheduled: !scheduled };
@@ -161,9 +161,9 @@ Nova.views.today = (() => {
     const body = $("#inbox-body");
     try {
       captures = await api("/api/inbox?days=7");
-      $("#inbox-count").textContent = captures.length ? `${captures.length} 筆待整理` : "";
+      $("#inbox-count").textContent = captures.length ? `${captures.length} to process` : "";
       if (!captures.length) {
-        body.innerHTML = `<p class="muted small">最近 7 天的快速記錄都整理完了 ✦<br>在最上方輸入框隨手記下想法，會出現在這裡。</p>`;
+        body.innerHTML = `<p class="muted small">All quick captures from the last 7 days are processed ✦<br>Jot down ideas in the box at the top and they will show up here.</p>`;
         return;
       }
       const today = todayISO(), yday = isoDate(addDays(new Date(), -1));
@@ -171,14 +171,14 @@ Nova.views.today = (() => {
       for (const c of captures) {
         if (c.date !== last) {
           last = c.date;
-          html += `<div class="cap-day">${c.date === today ? "今天" : c.date === yday ? "昨天" : fmtDay(c.date)}</div>`;
+          html += `<div class="cap-day">${c.date === today ? "Today" : c.date === yday ? "Yesterday" : fmtDay(c.date)}</div>`;
         }
         html += `<div class="capture-item" data-id="${esc(c.id)}">
           <span class="cap-time">${esc(c.time)}</span>
           <span class="cap-text">${esc(c.text)}</span>
           <span class="cap-btns">
-            <button class="to-task" title="轉成 TaskNotes 待辦">→ 待辦</button>
-            <button class="cap-del" title="刪除這筆記錄">✕</button>
+            <button class="to-task" title="Convert to a TaskNotes task">→ Task</button>
+            <button class="cap-del" title="Delete this capture">✕</button>
           </span></div>`;
       }
       body.innerHTML = html;
@@ -193,23 +193,23 @@ Nova.views.today = (() => {
       if (!c) return;
       if (e.target.closest(".to-task")) {
         const opts = taskMeta.priorities.map((p) => `<option value="${esc(p.value)}"${p.value === "normal" ? " selected" : ""}>${esc(p.label)}</option>`).join("");
-        dialog(`<h3>轉成待辦</h3>
-          <label>標題（可加 #標籤）<input name="text" required value="${esc(c.text)}"></label>
+        dialog(`<h3>Convert to task</h3>
+          <label>Title (#tags allowed)<input name="text" required value="${esc(c.text)}"></label>
           <div class="dlg-row">
-            <label>截止日<input name="due" type="date"></label>
-            <label>優先度<select name="priority">${opts}</select></label>
+            <label>Due date<input name="due" type="date"></label>
+            <label>Priority<select name="priority">${opts}</select></label>
           </div>
-          <p class="muted small">原本的記錄會保留，並標記「已轉成待辦」連到新待辦。</p>`,
+          <p class="muted small">The original capture is kept and marked as converted, with a link to the new task.</p>`,
           async (fd) => {
             await api("/api/inbox/convert", { method: "POST", body: { id: c.id, text: fd.get("text"), due: fd.get("due") || null, priority: fd.get("priority") } });
-            toast("已轉成待辦 ✓");
+            toast("Converted to task ✓");
             loadInbox(); loadTasks();
           });
       } else if (e.target.closest(".cap-del")) {
-        dialog(`<h3>刪除這筆記錄？</h3><p class="muted">「${esc(c.text)}」</p><p class="muted small">會從 ${esc(c.path)} 移除這一行。</p>`,
+        dialog(`<h3>Delete this capture?</h3><p class="muted">“${esc(c.text)}”</p><p class="muted small">This line will be removed from ${esc(c.path)}.</p>`,
           async () => {
             await api("/api/inbox/delete", { method: "POST", body: { id: c.id } });
-            toast("已刪除");
+            toast("Deleted");
             loadInbox();
           });
       }
@@ -223,7 +223,7 @@ Nova.views.today = (() => {
       `<button class="mood${day?.mood === i + 1 ? " on" : ""}" data-mood="${i + 1}" title="${i + 1} / 5">${m}</button>`).join("");
     $("#habit-row").innerHTML = settings.habits.length
       ? settings.habits.map((h) => `<button class="chip habit${day?.habits.includes(h) ? " on" : ""}" data-habit="${esc(h)}">${day?.habits.includes(h) ? "✓ " : ""}${esc(h)}</button>`).join("")
-      : `<span class="muted small">到「紀錄」頁新增習慣項目</span>`;
+      : `<span class="muted small">Add habits on the Records page</span>`;
   }
 
   function initCheckin() {
@@ -274,19 +274,19 @@ Nova.views.today = (() => {
     clearInterval(tick);
     const minutes = completed ? f.minutes : Math.round((Date.now() - f.start) / 60000);
     renderFocus();
-    if (minutes < 1) return toast("不到 1 分鐘，沒有記錄");
+    if (minutes < 1) return toast("Under 1 minute, nothing logged");
     try {
       day = await api("/api/records/day/today/study", { method: "POST", body: { subject: f.subject, minutes, start: f.startLabel } });
       renderStudyToday(); emit("records-changed");
-      const msg = completed ? `✦ 完成 ${minutes} 分鐘的 ${f.subject}，休息一下吧` : `已記錄 ${f.subject} ${minutes} 分鐘`;
+      const msg = completed ? `✦ Finished ${minutes} min of ${f.subject}. Take a break!` : `Logged ${minutes} min of ${f.subject}`;
       toast(msg);
-      if (completed && "Notification" in window && Notification.permission === "granted") new Notification("Nova 專注計時", { body: msg });
+      if (completed && "Notification" in window && Notification.permission === "granted") new Notification("Nova focus timer", { body: msg });
     } catch (err) { toast(err.message); }
   }
 
   function renderStudyToday() {
     const total = Object.values(day?.study || {}).reduce((a, b) => a + b, 0);
-    $("#focus-today").textContent = total ? `今天已讀 ${Math.floor(total / 60) ? `${Math.floor(total / 60)} 小時 ` : ""}${total % 60} 分` : "今天還沒開始";
+    $("#focus-today").textContent = total ? `Today: ${Math.floor(total / 60) ? `${Math.floor(total / 60)} h ` : ""}${total % 60} min` : "Not started today";
   }
 
   function initFocus() {
@@ -306,15 +306,15 @@ Nova.views.today = (() => {
     });
     $("#focus-stop").addEventListener("click", () => finishFocus(false));
     $("#focus-manual").addEventListener("click", () => {
-      dialog(`<h3>補記學習時數</h3>
-        <label>科目<select name="subject">${settings.subjects.map((s) => `<option>${esc(s)}</option>`).join("")}</select></label>
-        <label>分鐘<input name="minutes" type="number" min="1" max="1440" value="30" required></label>
-        <label>日期<input name="date" type="date" value="${todayISO()}" required></label>
-        <label>備註<input name="note" placeholder="例如：習題 3"></label>`,
+      dialog(`<h3>Log study time</h3>
+        <label>Subject<select name="subject">${settings.subjects.map((s) => `<option>${esc(s)}</option>`).join("")}</select></label>
+        <label>Minutes<input name="minutes" type="number" min="1" max="1440" value="30" required></label>
+        <label>Date<input name="date" type="date" value="${todayISO()}" required></label>
+        <label>Note<input name="note" placeholder="e.g. Exercise 3"></label>`,
         async (fd) => {
           await api(`/api/records/day/${fd.get("date")}/study`, { method: "POST", body: { subject: fd.get("subject"), minutes: Number(fd.get("minutes")), note: fd.get("note") } });
           if (fd.get("date") === todayISO()) { day = await api("/api/records/day/today"); renderStudyToday(); }
-          emit("records-changed"); toast("已記錄");
+          emit("records-changed"); toast("Logged");
         });
     });
     if (getFocus()) { $("#focus-subject").value = getFocus().subject; startTick(); }
@@ -332,7 +332,7 @@ Nova.views.today = (() => {
     const body = $("#today-mail");
     try {
       const s = await api("/api/mail/status");
-      if (!s.configured) { body.innerHTML = `<div class="notice">尚未設定 Gmail（見 README）。</div>`; return; }
+      if (!s.configured) { body.innerHTML = `<div class="notice">Gmail is not set up yet (see the README).</div>`; return; }
       const msgs = await api("/api/mail/messages?top=40&only_school=true");
       const unread = msgs.filter((m) => !m.is_read).length;
       const badge = $("#mail-badge");
@@ -341,7 +341,7 @@ Nova.views.today = (() => {
         <button class="item mail-item${m.is_read ? "" : " unread"}" data-id="${esc(m.id)}">
           <div class="mail-meta"><span>${esc(m.from)}</span><span>${fmtTime(m.received)}</span></div>
           <div class="title">${esc(m.subject)}</div>
-        </button>`).join("") : `<p class="muted small">最近沒有學校信件</p>`;
+        </button>`).join("") : `<p class="muted small">No recent school mail</p>`;
     } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
   }
 
@@ -349,14 +349,14 @@ Nova.views.today = (() => {
   let diaryTimer = null;
   function initDiary() {
     $("#diary-text").addEventListener("input", () => {
-      $("#diary-status").textContent = "編輯中…";
+      $("#diary-status").textContent = "Editing…";
       clearTimeout(diaryTimer);
       diaryTimer = setTimeout(async () => {
         try {
           day = await api("/api/records/day/today/diary", { method: "PUT", body: { text: $("#diary-text").value } });
-          $("#diary-status").textContent = "已儲存 ✓";
+          $("#diary-status").textContent = "Saved ✓";
           emit("records-changed");
-        } catch (e) { $("#diary-status").textContent = "儲存失敗：" + e.message; }
+        } catch (e) { $("#diary-status").textContent = "Save failed: " + e.message; }
       }, 800);
     });
   }

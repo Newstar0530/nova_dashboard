@@ -13,12 +13,12 @@ Nova.views.calendar = (() => {
 
   async function load(refresh = false) {
     const start = gridStart(), end = addDays(start, 42);
-    $("#cal-title").textContent = `${cursor.getFullYear()} 年 ${cursor.getMonth() + 1} 月`;
+    $("#cal-title").textContent = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     try {
       const st = await api("/api/calendar/status");
-      $("#cal-notice").innerHTML = st.configured ? "" : `<div class="notice">尚未訂閱行事曆，目前只顯示待辦的截止日。<br>
-        學校 Outlook：網頁版 → 設定 → 行事曆 → 共用行事曆 →「發佈行事曆」→ 複製 <b>ICS</b> 連結，
-        填到 <code>.env</code> 的 <code>CALENDAR_ICS=NEOMA=連結</code> 後重新啟動。</div>`;
+      $("#cal-notice").innerHTML = st.configured ? "" : `<div class="notice">No calendar subscribed yet; only task due dates are shown.<br>
+        School Outlook: web version → Settings → Calendar → Shared calendars → “Publish a calendar” → copy the <b>ICS</b> link,
+        put it in <code>.env</code> as <code>CALENDAR_ICS=NEOMA=link</code>, then restart.</div>`;
       data = await api(`/api/calendar/events?start=${isoDate(start)}&end=${isoDate(end)}${refresh ? "&refresh=true" : ""}`);
       if (data.errors.length) $("#cal-notice").innerHTML += `<div class="notice">⚠ ${data.errors.map(esc).join("<br>")}</div>`;
     } catch (e) {
@@ -31,7 +31,7 @@ Nova.views.calendar = (() => {
 
   function renderGrid() {
     const start = gridStart(), today = todayISO(), month = cursor.getMonth();
-    let html = ["一", "二", "三", "四", "五", "六", "日"].map((w) => `<div class="cal-wd">${w}</div>`).join("");
+    let html = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => `<div class="cal-wd">${w}</div>`).join("");
     for (let i = 0; i < 42; i++) {
       const d = addDays(start, i), iso = isoDate(d);
       const evs = eventsOn(iso), ts = tasksOn(iso);
@@ -51,12 +51,12 @@ Nova.views.calendar = (() => {
     const evs = eventsOn(selected), ts = tasksOn(selected);
     $("#cal-day-body").innerHTML =
       (evs.length ? evs.map((e) => `<div class="event">
-        <span class="ev-time">${e.all_day ? "全天" : `${hhmm(e.start)}<br><span>${hhmm(e.end)}</span>`}</span>
+        <span class="ev-time">${e.all_day ? "All day" : `${hhmm(e.start)}<br><span>${hhmm(e.end)}</span>`}</span>
         <span class="ev-main"><b>${esc(e.title)}</b>${e.location ? `<span class="muted small">📍 ${esc(e.location)}</span>` : ""}</span>
-        <span class="tag">${esc(e.source)}</span></div>`).join("") : `<p class="muted small">沒有行程</p>`) +
-      `<div class="sched-day">待辦</div>` +
-      (ts.length ? ts.map((t) => `<div class="task${t.done ? " done" : ""}"><span class="check static">${t.done ? "✓" : ""}</span><span class="task-text">${esc(t.text)}</span></div>`).join("") : `<p class="muted small">沒有到期的待辦</p>`) +
-      `<form class="task-form" id="cal-add-task"><input class="search" name="text" placeholder="在這天新增待辦…" autocomplete="off"><button class="small-btn">新增</button></form>`;
+        <span class="tag">${esc(e.source)}</span></div>`).join("") : `<p class="muted small">No events</p>`) +
+      `<div class="sched-day">Tasks</div>` +
+      (ts.length ? ts.map((t) => `<div class="task${t.done ? " done" : ""}"><span class="check static">${t.done ? "✓" : ""}</span><span class="task-text">${esc(t.text)}</span></div>`).join("") : `<p class="muted small">No tasks due</p>`) +
+      `<form class="task-form" id="cal-add-task"><input class="search" name="text" placeholder="Add a task for this day…" autocomplete="off"><button class="small-btn">Add</button></form>`;
   }
 
   return {
@@ -71,7 +71,7 @@ Nova.views.calendar = (() => {
       $("#cal-prev").addEventListener("click", () => shift(-1));
       $("#cal-next").addEventListener("click", () => shift(1));
       $("#cal-today").addEventListener("click", () => { cursor = new Date(); cursor.setDate(1); selected = todayISO(); load(); });
-      $("#cal-refresh").addEventListener("click", () => { load(true); toast("重新抓取行事曆…"); });
+      $("#cal-refresh").addEventListener("click", () => { load(true); toast("Refetching calendars…"); });
       $("#cal-grid").addEventListener("click", (e) => {
         const cell = e.target.closest(".cal-cell");
         if (!cell) return;
@@ -83,10 +83,10 @@ Nova.views.calendar = (() => {
       $("#cal-day-body").addEventListener("submit", async (e) => {
         e.preventDefault();
         const text = e.target.text.value.trim();
-        if (!text) return needInput(e.target.text, "先輸入待辦內容");
+        if (!text) return needInput(e.target.text, "Enter a task first");
         try {
           await api("/api/tasks", { method: "POST", body: { text, due: selected } });
-          toast(`已新增到 ${fmtDay(selected)}`);
+          toast(`Added to ${fmtDay(selected)}`);
           load();
         } catch (err) { toast(err.message); }
       });
