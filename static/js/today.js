@@ -261,7 +261,8 @@ Nova.views.today = (() => {
     $("#ielts-countdown").textContent = s.days_to_exam == null ? "No exam date" : s.days_to_exam >= 0 ? `Exam in ${s.days_to_exam} days` : "Exam date passed";
 
     const notices = [];
-    if (s.needs_diagnostic) notices.push(`Start with one full mock test, then run <code>/ielts mock</code>. Add your exam date in <code>學習計畫</code>.`);
+    if (s.needs_diagnostic) notices.push(`Start with one full mock test, then run <code>/ielts mock</code>.`);
+    else if (s.no_exam_date) notices.push(`No exam date yet — add <code>exam_date</code> in <code>學習計畫</code> when you book it.`);
     if (s.sprint_soon) notices.push(`The exam is less than two weeks away — switch the phase to <b>Final sprint</b>.`);
 
     const due = s.due_total

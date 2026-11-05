@@ -125,7 +125,9 @@ def status() -> dict:
         "exam_date": exam.isoformat() if exam else None,
         "days_to_exam": (exam - today).days if exam else None,
         "bands": {k: bands.get(k) for k in ("listening", "reading", "writing", "speaking")},
-        "needs_diagnostic": not exam or not any(bands.get(k) for k in ("listening", "reading", "writing", "speaking")),
+        # 還在診斷期、或四科都還沒有分數 → 提醒先做模考；沒有考試日期另外提醒
+        "needs_diagnostic": phase.lower() == "diagnostic" or not any(bands.get(k) for k in ("listening", "reading", "writing", "speaking")),
+        "no_exam_date": not exam,
         "weekday": weekday,
         "skill": skill,
         "focus_subject": _focus_subject(skill),
