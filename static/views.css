@@ -377,3 +377,12 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 .panel.flash { animation: flash 1.2s var(--ease); }
 @keyframes flash { 0%, 100% { box-shadow: 0 30px 60px -40px rgba(0,0,0,.9); } 30% { box-shadow: 0 0 0 2px var(--tiffany), 0 0 40px -6px var(--tiffany); } }
 .ielts-actions .ghost { gap: 6px; }
+
+/* 每日資訊 */
+.daily-feed { margin-bottom: 6px; border-radius: 12px; }
+.daily-feed.open { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); padding-bottom: 4px; }
+.daily-head { padding: 10px; border-radius: 10px; }
+.daily-head .daily-name { color: var(--ink); font-weight: 500; font-size: 13.5px; }
+.daily-head.unread .daily-name::after { content: " •"; color: var(--tiffany); }
+.daily-issue { margin: 0 6px; }
+.daily-empty { padding: 4px 12px 8px; }

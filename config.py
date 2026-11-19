@@ -24,6 +24,14 @@ IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com").strip()
 # 轉寄到 Gmail 的學校信箱：標籤=地址，用分號分隔
 MAIL_ACCOUNTS = os.getenv("MAIL_ACCOUNTS", "").strip()
 
+# 每日資訊：Claude 排程任務寄到 Gmail 的報告，依信件主旨開頭辨識
+# 格式：名稱=主旨開頭，用分號分隔
+DAILY_FEEDS = os.getenv(
+    "DAILY_FEEDS",
+    "Inbox triage=[收件匣整理];AI daily digest=[AI 每日摘要];"
+    "Student deals=[留學生交通住宿優惠];AI stocks weekly=[AI 股價影響週報]",
+).strip()
+
 # Notion
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "").strip()
