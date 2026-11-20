@@ -44,6 +44,19 @@ function fmtTime(iso) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// 信件內容放進 iframe：深色底，並蓋掉信件自帶的白底與深色字，避免看不到
+function mailDoc(m) {
+  const html = m.body_type === "text" ? `<pre style="white-space:pre-wrap;font-family:inherit">${esc(m.body_html)}</pre>` : m.body_html;
+  return `<base target="_blank"><meta name="color-scheme" content="dark"><style>
+    html, body { background: #121022 !important; }
+    body { font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; padding: 16px 24px; line-height: 1.55; margin: 0; }
+    body, body * { color: #e6e3f5 !important; background-color: transparent !important; border-color: rgba(255,255,255,.14) !important; }
+    a, a * { color: #7aa2ff !important; }
+    img { max-width: 100%; height: auto; }
+    hr { border: 0; border-top: 1px solid rgba(255,255,255,.14); }
+  </style>${html}`;
+}
+
 // 截止日的相對說明
 function dueLabel(due) {
   if (!due) return "";

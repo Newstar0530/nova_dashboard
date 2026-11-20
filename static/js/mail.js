@@ -62,8 +62,7 @@ Nova.views.mail = (() => {
           </div>
         </div>
         <iframe sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`;
-      const html = m.body_type === "text" ? `<pre style="white-space:pre-wrap;font-family:inherit">${esc(m.body_html)}</pre>` : m.body_html;
-      $("iframe", r).srcdoc = `<base target="_blank"><style>body{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;padding:16px 24px;color:#1f2328}img{max-width:100%}</style>${html}`;
+      $("iframe", r).srcdoc = mailDoc(m);
       $("[data-act=vault]", r).onclick = async () => {
         try {
           const res = await api(`/api/mail/messages/${encodeURIComponent(m.id)}/to-vault`, { method: "POST" });

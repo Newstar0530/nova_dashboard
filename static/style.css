@@ -330,7 +330,7 @@ a.chip:hover { color: var(--tiffany); border-color: var(--tiffany); box-shadow: 
 .note-editor:focus { outline: none; border-color: var(--accent-1); }
 .reader iframe {
   flex: 1; width: calc(100% - 32px); margin: 16px; border: 0; border-radius: 12px;
-  background: #fff; box-shadow: 0 20px 50px -25px rgba(0, 0, 0, .9);
+  background: #121022; box-shadow: 0 20px 50px -25px rgba(0, 0, 0, .9);
 }
 .reader > * { animation: rise .6s var(--ease) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
