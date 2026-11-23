@@ -51,7 +51,11 @@
 
   // ---------- 3. 卡片游標聚光 + 發光邊框（CSS 讀 --mx / --my） ----------
   const mouse = { x: -9999, y: -9999, active: false };
+  // 游標進到信件 iframe 後，這頁就收不到移動事件；光環和光暈要藏起來，不然會卡在框的邊緣
+  const overFrame = (e) => e.target?.tagName === "IFRAME";
+  const hideFx = () => { mouse.active = false; document.body.classList.remove("pointer-in", "has-ring"); };
   document.addEventListener("pointermove", (e) => {
+    if (overFrame(e)) return hideFx();
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
     document.body.classList.add("pointer-in");
     const panel = e.target.closest?.(".panel");
@@ -61,10 +65,7 @@
       panel.style.setProperty("--my", `${e.clientY - r.top}px`);
     }
   }, { passive: true });
-  document.addEventListener("pointerleave", () => {
-    mouse.active = false;
-    document.body.classList.remove("pointer-in", "has-ring");
-  });
+  document.addEventListener("pointerleave", hideFx);
 
   // ---------- 4. 游標光暈（緩動跟隨） ----------
   const glow = document.querySelector(".cursor-glow");
@@ -175,6 +176,7 @@
   let rx = 0, ry = 0;
   const CLICKABLE = "a, button, .item, .chip, .folder, .wikilink, input, summary";
   document.addEventListener("pointermove", (e) => {
+    if (overFrame(e)) return;
     document.body.classList.add("has-ring");
     dot.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
     ring.classList.toggle("hot", !!e.target.closest?.(CLICKABLE));
@@ -188,13 +190,8 @@
     requestAnimationFrame(ringLoop);
   };
   requestAnimationFrame(ringLoop);
-  // 游標進到信件 iframe 時，這頁收不到移動事件，先把光環藏起來
-  new MutationObserver(() => {
-    document.querySelectorAll("iframe:not([data-fx])").forEach((f) => {
-      f.dataset.fx = "1";
-      f.addEventListener("mouseenter", () => document.body.classList.remove("has-ring", "pointer-in"));
-    });
-  }).observe(document.body, { childList: true, subtree: true });
+  // 保險：滑鼠一進到 iframe 就藏（有些瀏覽器進框時不再送 pointermove）
+  document.addEventListener("pointerover", (e) => { if (overFrame(e)) hideFx(); }, { passive: true });
 
   // ---------- 8. 磁吸按鈕 ----------
   document.querySelectorAll(".capture button, .small-btn").forEach((btn) => {
