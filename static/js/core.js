@@ -44,10 +44,24 @@ function fmtTime(iso) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// 信件內容放進 iframe：深色底，並蓋掉信件自帶的白底與深色字，避免看不到
+// 信件框裡唯一能執行的程式：把滑鼠位置回報給工作台，讓游標光環在信件裡也跟著
+const FRAME_RELAY = `(() => {
+  const send = (t, e) => parent.postMessage({ novaFrame: t, x: e.clientX, y: e.clientY,
+    hot: !!(e.target && e.target.closest && e.target.closest("a, button, input, summary")) }, "*");
+  addEventListener("pointermove", (e) => send("move", e), { passive: true });
+  addEventListener("pointerdown", (e) => send("down", e));
+  addEventListener("pointerup", (e) => send("up", e));
+  document.documentElement.addEventListener("pointerleave", (e) => send("leave", e));
+})();`;
+
+// 信件內容放進 iframe：深色底，並蓋掉信件自帶的白底與深色字，避免看不到。
+// 框是隔離的（sandbox，不同來源），CSP 只放行帶這次隨機 nonce 的 FRAME_RELAY，信件自己的程式一律不執行。
 function mailDoc(m) {
   const html = m.body_type === "text" ? `<pre style="white-space:pre-wrap;font-family:inherit">${esc(m.body_html)}</pre>` : m.body_html;
-  return `<base target="_blank"><meta name="color-scheme" content="dark"><style>
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  return `<meta http-equiv="Content-Security-Policy" content="script-src 'nonce-${nonce}'; object-src 'none'">
+  <script nonce="${nonce}">${FRAME_RELAY}</script>
+  <base target="_blank"><meta name="color-scheme" content="dark"><style>
     html, body { background: #121022 !important; }
     body { font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; padding: 16px 24px; line-height: 1.55; margin: 0; }
     body, body * { color: #e6e3f5 !important; background-color: transparent !important; border-color: rgba(255,255,255,.14) !important; }

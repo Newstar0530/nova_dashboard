@@ -51,11 +51,14 @@
 
   // ---------- 3. 卡片游標聚光 + 發光邊框（CSS 讀 --mx / --my） ----------
   const mouse = { x: -9999, y: -9999, active: false };
-  // 游標進到信件 iframe 後，這頁就收不到移動事件；光環和光暈要藏起來，不然會卡在框的邊緣
+  // 游標進到信件 iframe 後，這頁收不到移動事件，改由框裡回報位置（見 7. 的 message）；
+  // 在那之前先藏起來，不然光環會卡在框的邊緣
   const overFrame = (e) => e.target?.tagName === "IFRAME";
   const hideFx = () => { mouse.active = false; document.body.classList.remove("pointer-in", "has-ring"); };
+  let lastPageMove = 0;
   document.addEventListener("pointermove", (e) => {
     if (overFrame(e)) return hideFx();
+    lastPageMove = performance.now();
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
     document.body.classList.add("pointer-in");
     const panel = e.target.closest?.(".panel");
@@ -190,8 +193,34 @@
     requestAnimationFrame(ringLoop);
   };
   requestAnimationFrame(ringLoop);
-  // 保險：滑鼠一進到 iframe 就藏（有些瀏覽器進框時不再送 pointermove）
   document.addEventListener("pointerover", (e) => { if (overFrame(e)) hideFx(); }, { passive: true });
+
+  // 信件 iframe 回報的滑鼠位置（框內座標 → 頁面座標），光環和光暈照常跟著
+  addEventListener("message", (e) => {
+    const d = e.data;
+    if (!d || typeof d.novaFrame !== "string") return;
+    const frame = [...document.querySelectorAll("iframe")].find((f) => f.contentWindow === e.source);
+    if (!frame) return;  // 只接受這頁自己的信件框
+    if (d.novaFrame === "leave") {
+      if (performance.now() - lastPageMove > 120) hideFx();  // 已經移回頁面就不要藏
+      return;
+    }
+    if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) return;
+    const r = frame.getBoundingClientRect();
+    const x = r.left + d.x, y = r.top + d.y;
+    mouse.x = x; mouse.y = y; mouse.active = true;
+    document.body.classList.add("pointer-in", "has-ring");
+    dot.style.transform = `translate(${x}px, ${y}px)`;
+    ring.classList.toggle("hot", d.hot === true);
+    if (d.novaFrame === "down") ring.classList.add("press");
+    if (d.novaFrame === "up") ring.classList.remove("press");
+    const panel = frame.closest(".panel");
+    if (panel) {
+      const p = panel.getBoundingClientRect();
+      panel.style.setProperty("--mx", `${x - p.left}px`);
+      panel.style.setProperty("--my", `${y - p.top}px`);
+    }
+  });
 
   // ---------- 8. 磁吸按鈕 ----------
   document.querySelectorAll(".capture button, .small-btn").forEach((btn) => {

@@ -61,7 +61,7 @@ Nova.views.mail = (() => {
             ${m.web_link ? `<a class="ghost" href="${esc(m.web_link)}" target="_blank">Open in Gmail</a>` : ""}
           </div>
         </div>
-        <iframe sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`;
+        <iframe sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`;
       $("iframe", r).srcdoc = mailDoc(m);
       $("[data-act=vault]", r).onclick = async () => {
         try {
