@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=30">
-  <link rel="stylesheet" href="/static/views.css?v=30">
+  <link rel="stylesheet" href="/static/style.css?v=31">
+  <link rel="stylesheet" href="/static/views.css?v=31">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -64,12 +64,12 @@
           </div>
 
           <div class="rs rs-col" data-rs="today-mid" data-dir="v" data-grow="1.15">
-            <section data-grow="1" class="panel reveal" id="card-inbox">
+            <section data-grow="1" class="panel reveal" id="card-attention">
               <div class="panel-head">
-                <h2 class="bt">Inbox <span class="eyebrow">Captures</span></h2>
-                <span class="muted small" id="inbox-count"></span>
+                <h2 class="bt">Needs attention <span class="eyebrow">Inbox triage</span></h2>
+                <a class="ghost" href="#daily">Daily →</a>
               </div>
-              <div id="inbox-body" class="scroll"></div>
+              <div id="attention-body" class="scroll"></div>
             </section>
 
             <section data-grow="1" class="panel reveal" id="card-tasks">
@@ -105,12 +105,12 @@
               </div>
             </section>
 
-            <section data-grow="1" class="panel reveal" id="card-attention">
+            <section data-grow="1" class="panel reveal" id="card-inbox">
               <div class="panel-head">
-                <h2 class="bt">Needs attention <span class="eyebrow">Inbox triage</span></h2>
-                <a class="ghost" href="#daily">Daily →</a>
+                <h2 class="bt">Inbox <span class="eyebrow">Captures</span></h2>
+                <span class="muted small" id="inbox-count"></span>
               </div>
-              <div id="attention-body" class="scroll"></div>
+              <div id="inbox-body" class="scroll"></div>
             </section>
           </div>
         </div>
@@ -250,15 +250,15 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=30"></script>
-  <script src="/static/js/splitter.js?v=30"></script>
-  <script src="/static/js/charts.js?v=30"></script>
-  <script src="/static/js/today.js?v=30"></script>
-  <script src="/static/js/calendar.js?v=30"></script>
-  <script src="/static/js/mail.js?v=30"></script>
-  <script src="/static/js/daily.js?v=30"></script>
-  <script src="/static/js/notes.js?v=30"></script>
-  <script src="/static/js/records.js?v=30"></script>
-  <script src="/static/fx.js?v=30"></script>
+  <script src="/static/js/core.js?v=31"></script>
+  <script src="/static/js/splitter.js?v=31"></script>
+  <script src="/static/js/charts.js?v=31"></script>
+  <script src="/static/js/today.js?v=31"></script>
+  <script src="/static/js/calendar.js?v=31"></script>
+  <script src="/static/js/mail.js?v=31"></script>
+  <script src="/static/js/daily.js?v=31"></script>
+  <script src="/static/js/notes.js?v=31"></script>
+  <script src="/static/js/records.js?v=31"></script>
+  <script src="/static/fx.js?v=31"></script>
 </body>
 </html>
