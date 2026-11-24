@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=22">
-  <link rel="stylesheet" href="/static/views.css?v=22">
+  <link rel="stylesheet" href="/static/style.css?v=24">
+  <link rel="stylesheet" href="/static/views.css?v=24">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -94,17 +94,6 @@
                 <h2 class="bt">World clock <span class="eyebrow">Time</span></h2>
               </div>
               <div class="clocks" id="clocks"></div>
-            </section>
-
-            <section data-grow="1" class="panel reveal" id="card-checkin">
-              <div class="panel-head">
-                <h2 class="bt">Daily check-in <span class="eyebrow">Check-in</span></h2>
-                <a class="ghost" href="#records">Records →</a>
-              </div>
-              <div class="sub-label">Mood</div>
-              <div class="mood-row" id="mood-row"></div>
-              <div class="sub-label">Habits</div>
-              <div class="habit-row" id="habit-row"></div>
             </section>
           </div>
         </div>
@@ -202,6 +191,16 @@
       <!-- ================= 紀錄 ================= -->
       <section class="view" data-view="records">
         <div class="records-grid">
+          <section class="panel reveal" id="rec-checkin">
+            <div class="panel-head">
+              <h2 class="bt">Today's check-in <span class="eyebrow">Check-in</span></h2>
+              <span class="muted small" id="checkin-date"></span>
+            </div>
+            <div class="checkin-cols">
+              <div><div class="sub-label">Mood</div><div class="mood-row" id="mood-row"></div></div>
+              <div><div class="sub-label">Habits</div><div class="habit-row" id="habit-row"></div></div>
+            </div>
+          </section>
           <section class="panel reveal" id="rec-habits">
             <div class="panel-head">
               <h2 class="bt">Habits <span class="eyebrow">Last 12 weeks</span></h2>
@@ -234,15 +233,15 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=22"></script>
-  <script src="/static/js/splitter.js?v=22"></script>
-  <script src="/static/js/charts.js?v=22"></script>
-  <script src="/static/js/today.js?v=22"></script>
-  <script src="/static/js/calendar.js?v=22"></script>
-  <script src="/static/js/mail.js?v=22"></script>
-  <script src="/static/js/daily.js?v=22"></script>
-  <script src="/static/js/notes.js?v=22"></script>
-  <script src="/static/js/records.js?v=22"></script>
-  <script src="/static/fx.js?v=22"></script>
+  <script src="/static/js/core.js?v=24"></script>
+  <script src="/static/js/splitter.js?v=24"></script>
+  <script src="/static/js/charts.js?v=24"></script>
+  <script src="/static/js/today.js?v=24"></script>
+  <script src="/static/js/calendar.js?v=24"></script>
+  <script src="/static/js/mail.js?v=24"></script>
+  <script src="/static/js/daily.js?v=24"></script>
+  <script src="/static/js/notes.js?v=24"></script>
+  <script src="/static/js/records.js?v=24"></script>
+  <script src="/static/fx.js?v=24"></script>
 </body>
 </html>

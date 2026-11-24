@@ -1,7 +1,5 @@
 // 「今天」總覽：今日行程、待辦、心情/習慣打卡、專注計時、學校信件、今日日記。
 Nova.views.today = (() => {
-  let settings = { habits: [], subjects: [] };
-  let day = null;
 
   // ---------- 今日行程 ----------
   async function loadSchedule() {
@@ -217,35 +215,6 @@ Nova.views.today = (() => {
     on("vault-changed", () => Nova.current === "today" && loadInbox());
   }
 
-  // ---------- 心情 / 習慣 ----------
-  function renderCheckin() {
-    $("#mood-row").innerHTML = MOODS.map((m, i) =>
-      `<button class="mood${day?.mood === i + 1 ? " on" : ""}" data-mood="${i + 1}" title="${i + 1} / 5">${m}</button>`).join("");
-    $("#habit-row").innerHTML = settings.habits.length
-      ? settings.habits.map((h) => `<button class="chip habit${day?.habits.includes(h) ? " on" : ""}" data-habit="${esc(h)}">${day?.habits.includes(h) ? "✓ " : ""}${esc(h)}</button>`).join("")
-      : `<span class="muted small">Add habits on the Records page</span>`;
-  }
-
-  function initCheckin() {
-    $("#mood-row").addEventListener("click", async (e) => {
-      const b = e.target.closest(".mood");
-      if (!b) return;
-      const mood = Number(b.dataset.mood);
-      try {
-        day = await api("/api/records/day/today/mood", { method: "PUT", body: { mood: day?.mood === mood ? null : mood } });
-        renderCheckin(); emit("records-changed");
-      } catch (err) { toast(err.message); }
-    });
-    $("#habit-row").addEventListener("click", async (e) => {
-      const b = e.target.closest(".habit");
-      if (!b) return;
-      try {
-        day = await api("/api/records/day/today/habit", { method: "PUT", body: { habit: b.dataset.habit, done: !b.classList.contains("on") } });
-        renderCheckin(); emit("records-changed");
-      } catch (err) { toast(err.message); }
-    });
-  }
-
   // ---------- IELTS（30 雅思 資料夾，/ielts skill 的資料） ----------
   let ielts = null;
 
@@ -346,19 +315,12 @@ Nova.views.today = (() => {
     } catch {}
   }
 
-  async function loadDay() {
-    [settings, day] = await Promise.all([api("/api/records/settings"), api("/api/records/day/today")]);
-    renderCheckin();
-  }
-
   return {
     init() {
-      initTasks(); initInbox(); initCheckin(); initIelts(); initClocks();
-      on("settings-changed", loadDay);
+      initTasks(); initInbox(); initIelts(); initClocks();
     },
     show() {
       loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadIelts();
-      loadDay().catch((e) => toast(e.message));
     },
   };
 })();

@@ -100,7 +100,7 @@ const Charts = (() => {
     days.forEach((d, i) => d.mood != null && el("circle", { cx: x(i), cy: y(d.mood), r: 4, fill: MOOD_LINE, stroke: SURFACE, "stroke-width": 2 }, svg));
 
     if (!days.some((d) => d.mood != null)) {
-      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No mood logged yet. Check in on the Today page");
+      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No mood logged yet. Pick one in Today's check-in above");
     }
 
     // 十字線 + tooltip
@@ -180,7 +180,7 @@ const Charts = (() => {
       hit.addEventListener("pointerleave", () => { t.hide(); hit.classList.remove("on"); });
     });
     if (!days.some((d) => d.study_total)) {
-      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No study time logged yet. Start with the Focus timer");
+      el("text", { x: W / 2, y: H / 2, class: "ax empty", "text-anchor": "middle" }, svg).append("No study time logged yet");
     }
     container.appendChild(table(["Date", ...order, "Total"],
       days.filter((d) => d.study_total).map((d) => [fmtDay(d.date), ...order.map((s) => d.study[s] || ""), d.study_total])));

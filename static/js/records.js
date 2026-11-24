@@ -1,13 +1,33 @@
 // 紀錄頁：習慣熱度圖、心情折線、學習時數、日記回顧 / 編輯。
 Nova.views.records = (() => {
-  let stats = null, settings = null, vaultName = "";
+  let stats = null, settings = null, vaultName = "", today = null;
   let diaryDate = todayISO();
   let saveTimer = null;
 
   async function load() {
-    [stats, settings] = await Promise.all([api("/api/records/stats?days=84"), api("/api/records/settings")]);
+    [stats, settings, today] = await Promise.all([
+      api("/api/records/stats?days=84"), api("/api/records/settings"), api("/api/records/day/today")]);
+    renderCheckin();
     draw();
     loadDiary();
+  }
+
+  // 今天的心情與習慣打卡
+  function renderCheckin() {
+    $("#checkin-date").textContent = fmtDay(todayISO());
+    $("#mood-row").innerHTML = MOODS.map((m, i) =>
+      `<button class="mood${today?.mood === i + 1 ? " on" : ""}" data-mood="${i + 1}" title="${i + 1} / 5">${m}</button>`).join("");
+    $("#habit-row").innerHTML = settings.habits.length
+      ? settings.habits.map((h) => `<button class="chip habit${today?.habits.includes(h) ? " on" : ""}" data-habit="${esc(h)}">${today?.habits.includes(h) ? "✓ " : ""}${esc(h)}</button>`).join("")
+      : `<span class="muted small">No habits yet — click “Edit items” below to add some.</span>`;
+  }
+
+  async function checkin(path, body) {
+    try {
+      today = await api(`/api/records/day/today/${path}`, { method: "PUT", body });
+      renderCheckin();
+      emit("records-changed");  // 熱度圖、心情折線跟著更新
+    } catch (err) { toast(err.message); }
   }
 
   function draw() {
@@ -67,6 +87,16 @@ Nova.views.records = (() => {
     init() {
       api("/api/vault/info").then((v) => (vaultName = v.name)).catch(() => {});
       $("#rec-settings-btn").addEventListener("click", editSettings);
+      $("#mood-row").addEventListener("click", (e) => {
+        const b = e.target.closest(".mood");
+        if (!b) return;
+        const mood = Number(b.dataset.mood);
+        checkin("mood", { mood: today?.mood === mood ? null : mood });
+      });
+      $("#habit-row").addEventListener("click", (e) => {
+        const b = e.target.closest(".habit");
+        if (b) checkin("habit", { habit: b.dataset.habit, done: !b.classList.contains("on") });
+      });
       $("#diary-date").addEventListener("change", (e) => { diaryDate = e.target.value || todayISO(); loadDiary(); });
       $("#diary-view").addEventListener("click", (e) => {
         const chip = e.target.closest(".chip[data-date]");

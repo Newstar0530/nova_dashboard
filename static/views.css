@@ -204,8 +204,11 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 .records-grid {
   display: grid; gap: 16px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "habits mood" "habits study" "diary diary";
+  grid-template-areas: "checkin checkin" "habits mood" "habits study" "diary diary";
 }
+#rec-checkin { grid-area: checkin; }
+.checkin-cols { display: grid; grid-template-columns: auto 1fr; gap: 8px 40px; align-items: start; }
+@media (max-width: 900px) { .checkin-cols { grid-template-columns: 1fr; } }
 #rec-habits { grid-area: habits; }
 #rec-mood { grid-area: mood; }
 #rec-study { grid-area: study; }
