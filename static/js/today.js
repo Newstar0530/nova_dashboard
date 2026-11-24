@@ -276,8 +276,7 @@ Nova.views.today = (() => {
       ${notices.map((n) => `<div class="notice small">${n}</div>`).join("")}
       <div class="ielts-grid">
         <span class="k">Today (${esc(s.weekday)})</span>
-        <span class="v"><b>${esc(s.skill)}</b>
-          ${s.focus_subject ? `<button class="link-btn" id="ielts-timer">Set timer →</button>` : ""}</span>
+        <span class="v"><b>${esc(s.skill)}</b></span>
         <span class="k">Review</span><span class="v">${due}${s.due_total ? ` <code>/ielts review</code>` : ""}</span>
         <span class="k">Feedback</span><span class="v">${waiting}</span>
         <span class="k">Studied</span><span class="v">${s.minutes_today ? `${s.minutes_today} min today` : `<span class="muted">Nothing logged today</span>`}</span>
@@ -291,16 +290,7 @@ Nova.views.today = (() => {
 
   function initIelts() {
     $("#ielts-body").addEventListener("click", async (e) => {
-      if (e.target.closest("#ielts-timer")) {
-        // 專注計時預選今天的科目（計時中就不動）
-        if (getFocus()) return toast("A focus session is already running");
-        const sel = $("#focus-subject");
-        if (![...sel.options].some((o) => o.value === ielts.focus_subject)) sel.add(new Option(ielts.focus_subject));
-        sel.value = ielts.focus_subject;
-        $("#card-focus").scrollIntoView({ behavior: "smooth", block: "nearest" });
-        $("#card-focus").classList.remove("flash"); void $("#card-focus").offsetWidth; $("#card-focus").classList.add("flash");
-        toast(`Focus timer set to ${ielts.focus_subject} — press Start`);
-      } else if (e.target.closest("#ielts-copy")) {
+      if (e.target.closest("#ielts-copy")) {
         try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today"); }
         catch { toast("Couldn't copy — type /ielts today in Claude Code"); }
       } else if (e.target.closest(".ielts-note")) {
@@ -312,85 +302,36 @@ Nova.views.today = (() => {
     on("records-changed", () => Nova.current === "today" && loadIelts());
   }
 
-  // ---------- 專注計時（番茄鐘） ----------
-  const FOCUS_KEY = "nova.focus";
-  let focusLen = 25, tick = null;
-  const getFocus = () => { try { return JSON.parse(localStorage.getItem(FOCUS_KEY)); } catch { return null; } };
-  const setFocus = (v) => { try { v ? localStorage.setItem(FOCUS_KEY, JSON.stringify(v)) : localStorage.removeItem(FOCUS_KEY); } catch {} };
-
-  function renderFocus() {
-    const f = getFocus();
-    const total = (f?.minutes || focusLen) * 60;
-    const left = f ? Math.max(0, Math.round((f.end - Date.now()) / 1000)) : total;
-    $("#focus-time").textContent = `${pad(Math.floor(left / 60))}:${pad(left % 60)}`;
-    $("#focus-ring").style.setProperty("--p", `${f ? (1 - left / total) * 360 : 0}deg`);
-    $("#focus-ring").classList.toggle("running", !!f);
-    $("#focus-start").hidden = !!f;
-    $("#focus-stop").hidden = !f;
-    $("#focus-subject").disabled = !!f;
-    $$("#focus-len button").forEach((b) => (b.disabled = !!f));
-    document.title = f ? `⏳ ${$("#focus-time").textContent} · ${f.subject}` : "Nova Dashboard";
-    if (f && left === 0) finishFocus(true);
+  // ---------- 世界時鐘：台灣、法國 ----------
+  const CLOCKS = [
+    { label: "Taiwan", city: "Taipei", tz: "Asia/Taipei", flag: "🇹🇼" },
+    { label: "France", city: "Paris", tz: "Europe/Paris", flag: "🇫🇷" },
+  ];
+  const tzOffset = (tz, d) => {  // 該時區相對 UTC 的分鐘數（含夏令時間）
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
+      year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" })
+      .formatToParts(d).map((x) => [x.type, x.value]));
+    return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - d.getTime()) / 60000);
+  };
+  function renderClocks() {
+    const now = new Date();
+    const diff = (tzOffset(CLOCKS[0].tz, now) - tzOffset(CLOCKS[1].tz, now)) / 60;
+    $("#clocks").innerHTML = CLOCKS.map((c, i) => {
+      const time = now.toLocaleTimeString("en-GB", { timeZone: c.tz, hour: "2-digit", minute: "2-digit" });
+      const sec = now.toLocaleTimeString("en-GB", { timeZone: c.tz, second: "2-digit" }).padStart(2, "0");
+      const date = now.toLocaleDateString("en-US", { timeZone: c.tz, weekday: "short", month: "short", day: "numeric" });
+      const note = i === 0 ? `${diff >= 0 ? "+" : ""}${diff}h vs France` : `UTC${tzOffset(c.tz, now) >= 0 ? "+" : ""}${tzOffset(c.tz, now) / 60}`;
+      return `<div class="clock">
+        <div class="clock-place"><span>${c.flag}</span> ${c.label} <span class="muted">· ${c.city}</span></div>
+        <div class="clock-time">${time}<span class="clock-sec">${sec}</span></div>
+        <div class="clock-meta">${date} <span class="muted">· ${note}</span></div>
+      </div>`;
+    }).join("");
   }
-
-  async function finishFocus(completed) {
-    const f = getFocus();
-    if (!f) return;
-    setFocus(null);
-    clearInterval(tick);
-    const minutes = completed ? f.minutes : Math.round((Date.now() - f.start) / 60000);
-    renderFocus();
-    if (minutes < 1) return toast("Under 1 minute, nothing logged");
-    try {
-      day = await api("/api/records/day/today/study", { method: "POST", body: { subject: f.subject, minutes, start: f.startLabel } });
-      renderStudyToday(); emit("records-changed");
-      const msg = completed ? `✦ Finished ${minutes} min of ${f.subject}. Take a break!` : `Logged ${minutes} min of ${f.subject}`;
-      toast(msg);
-      if (completed && "Notification" in window && Notification.permission === "granted") new Notification("Nova focus timer", { body: msg });
-    } catch (err) { toast(err.message); }
-  }
-
-  function renderStudyToday() {
-    const total = Object.values(day?.study || {}).reduce((a, b) => a + b, 0);
-    $("#focus-today").textContent = total ? `Today: ${Math.floor(total / 60) ? `${Math.floor(total / 60)} h ` : ""}${total % 60} min` : "Not started today";
-  }
-
-  function initFocus() {
-    $("#focus-len").addEventListener("click", (e) => {
-      const b = e.target.closest("button");
-      if (!b || getFocus()) return;
-      focusLen = Number(b.dataset.min);
-      $$("#focus-len button").forEach((x) => x.classList.toggle("on", x === b));
-      renderFocus();
-    });
-    $("#focus-start").addEventListener("click", () => {
-      const now = new Date();
-      setFocus({ subject: $("#focus-subject").value || "其他", minutes: focusLen, start: now.getTime(), end: now.getTime() + focusLen * 60000,
-        startLabel: `${pad(now.getHours())}:${pad(now.getMinutes())}` });
-      if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-      startTick();
-    });
-    $("#focus-stop").addEventListener("click", () => finishFocus(false));
-    $("#focus-manual").addEventListener("click", () => {
-      dialog(`<h3>Log study time</h3>
-        <label>Subject<select name="subject">${settings.subjects.map((s) => `<option>${esc(s)}</option>`).join("")}</select></label>
-        <label>Minutes<input name="minutes" type="number" min="1" max="1440" value="30" required></label>
-        <label>Date<input name="date" type="date" value="${todayISO()}" required></label>
-        <label>Note<input name="note" placeholder="e.g. Exercise 3"></label>`,
-        async (fd) => {
-          await api(`/api/records/day/${fd.get("date")}/study`, { method: "POST", body: { subject: fd.get("subject"), minutes: Number(fd.get("minutes")), note: fd.get("note") } });
-          if (fd.get("date") === todayISO()) { day = await api("/api/records/day/today"); renderStudyToday(); }
-          emit("records-changed"); toast("Logged");
-        });
-    });
-    if (getFocus()) { $("#focus-subject").value = getFocus().subject; startTick(); }
-    else renderFocus();
-  }
-
-  function startTick() {
-    clearInterval(tick);
-    renderFocus();
-    tick = setInterval(renderFocus, 1000);
+  function initClocks() {
+    try { localStorage.removeItem("nova.focus"); } catch {}  // 舊的番茄鐘狀態
+    renderClocks();
+    setInterval(renderClocks, 1000);
   }
 
   // ---------- 側欄 Mail 的未讀數（學校信件） ----------
@@ -405,34 +346,14 @@ Nova.views.today = (() => {
     } catch {}
   }
 
-  // ---------- 今日日記（自動儲存） ----------
-  let diaryTimer = null;
-  function initDiary() {
-    $("#diary-text").addEventListener("input", () => {
-      $("#diary-status").textContent = "Editing…";
-      clearTimeout(diaryTimer);
-      diaryTimer = setTimeout(async () => {
-        try {
-          day = await api("/api/records/day/today/diary", { method: "PUT", body: { text: $("#diary-text").value } });
-          $("#diary-status").textContent = "Saved ✓";
-          emit("records-changed");
-        } catch (e) { $("#diary-status").textContent = "Save failed: " + e.message; }
-      }, 800);
-    });
-  }
-
   async function loadDay() {
     [settings, day] = await Promise.all([api("/api/records/settings"), api("/api/records/day/today")]);
-    $("#focus-subject").innerHTML = settings.subjects.map((s) => `<option>${esc(s)}</option>`).join("");
-    if (getFocus()) $("#focus-subject").value = getFocus().subject;
     renderCheckin();
-    renderStudyToday();
-    if (document.activeElement !== $("#diary-text")) $("#diary-text").value = day.diary;
   }
 
   return {
     init() {
-      initTasks(); initInbox(); initCheckin(); initIelts(); initFocus(); initDiary();
+      initTasks(); initInbox(); initCheckin(); initIelts(); initClocks();
       on("settings-changed", loadDay);
     },
     show() {

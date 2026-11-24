@@ -81,7 +81,6 @@ Nova.views.records = (() => {
           try {
             await api(`/api/records/day/${date}/diary`, { method: "PUT", body: { text } });
             $("#rec-diary-status").textContent = "Saved ✓";
-            if (date === todayISO()) $("#diary-text").value = text;
           } catch (err) { $("#rec-diary-status").textContent = "Save failed: " + err.message; }
         }, 800);
       });
