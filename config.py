@@ -32,6 +32,9 @@ DAILY_FEEDS = os.getenv(
     "Student deals=[留學生交通住宿優惠];AI stocks weekly=[AI 股價影響週報]",
 ).strip()
 
+# Today 頁世界時鐘旁的天氣：名稱=緯度,經度，用分號分隔（台灣、法國各一個）
+WEATHER_PLACES = os.getenv("WEATHER_PLACES", "Hsinchu=24.8138,120.9675;Rouen=49.4431,1.0993").strip()
+
 # Notion
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "").strip()

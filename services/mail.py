@@ -209,12 +209,13 @@ def list_messages(top: int = 40, q: str | None = None, school: str | None = None
     return msgs[:top]
 
 
-def get_message(uid: str) -> dict:
+def get_message(uid: str, peek: bool = False) -> dict:
+    """peek=True：只讀內容、不標為已讀（給工作台自己解析用）。"""
     if not uid.isdigit():
         raise ValueError("Invalid message ID")
-    with _connect(readonly=False) as conn:  # 用 BODY[]（非 PEEK）讀取 → 標為已讀
+    with _connect(readonly=peek) as conn:  # 用 BODY[]（非 PEEK）讀取 → 標為已讀
         extra = " X-GM-MSGID" if _is_gmail() else ""
-        typ, data = conn.uid("FETCH", uid, f"(UID{extra} BODY[])")
+        typ, data = conn.uid("FETCH", uid, f"(UID{extra} {'BODY.PEEK[]' if peek else 'BODY[]'})")
     parsed = _parse_fetch(data)
     if not parsed:
         raise ValueError("Message not found")

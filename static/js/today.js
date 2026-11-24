@@ -218,9 +218,12 @@ Nova.views.today = (() => {
   // ---------- 截止倒數：未完成、有截止日的待辦（逾期的也算） ----------
   const DL_DAYS = 14;
   async function loadDeadlines() {
-    let list;
-    try { list = await api("/api/tasks"); }
+    let list, ielts = null;
+    try { [list, ielts] = await Promise.all([api("/api/tasks"), api("/api/ielts").catch(() => null)]); }
     catch (e) { $("#dl-list").innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; }
+    if (ielts?.available && ielts.exam_date) {
+      list = [...list, { text: "IELTS exam", due: ielts.exam_date, done: false, projects: [], exam: true }];
+    }
     const open = list.filter((t) => !t.done && t.due && daysLeft(t.due) < DL_DAYS)
       .sort((a, b) => a.due.localeCompare(b.due) || a.text.localeCompare(b.text));
     const later = list.filter((t) => !t.done && t.due && daysLeft(t.due) >= DL_DAYS).length;
@@ -239,69 +242,27 @@ Nova.views.today = (() => {
         <span class="dl-dots">${"●".repeat(Math.min(due.length, 3))}</span></div>`;
     }).join("");
 
-    $("#dl-list").innerHTML = open.length ? open.map((t) => `
+    $("#dl-list").innerHTML = ieltsReminder(ielts) + (open.length ? open.map((t) => `
       <div class="dl-item ${deadlineLevel(t.due)}">
         <span class="dl-count">${countdown(t.due)}</span>
         <span class="dl-main"><span class="dl-title">${esc(t.text)}</span>
           <span class="dl-meta">${fmtDay(t.due)}${taskCourse(t) ? ` · ${esc(taskCourse(t))}` : ""}</span></span>
       </div>`).join("") + (later ? `<p class="muted small dl-later">+${later} later — see Calendar</p>` : "")
-      : `<p class="muted small">Nothing due in the next ${DL_DAYS} days 🎉</p>${later ? `<p class="muted small">${later} later — see Calendar</p>` : ""}`;
+      : `<p class="muted small">Nothing due in the next ${DL_DAYS} days 🎉</p>${later ? `<p class="muted small">${later} later — see Calendar</p>` : ""}`);
   }
 
-  // ---------- IELTS（30 雅思 資料夾，/ielts skill 的資料） ----------
-  let ielts = null;
-
-  async function loadIelts() {
-    const card = $("#card-ielts");
-    try {
-      ielts = await api("/api/ielts");
-    } catch { card.hidden = true; return; }
-    card.hidden = !ielts.available;
-    if (!ielts.available) return;
-    const s = ielts;
-    $("#ielts-phase").textContent = `${s.phase} · Target ${s.target_band}`;
-    $("#ielts-countdown").textContent = s.days_to_exam == null ? "No exam date" : s.days_to_exam >= 0 ? `Exam in ${s.days_to_exam} days` : "Exam date passed";
-
-    const notices = [];
-    if (s.needs_diagnostic) notices.push(`Start with one full mock test, then run <code>/ielts mock</code>.`);
-    else if (s.no_exam_date) notices.push(`No exam date yet — add <code>exam_date</code> in <code>學習計畫</code> when you book it.`);
-    if (s.sprint_soon) notices.push(`The exam is less than two weeks away — switch the phase to <b>Final sprint</b>.`);
-
-    const due = s.due_total
-      ? `<b>${s.due_total}</b> due <span class="muted">(${[["words", "words"], ["patterns", "patterns"], ["grammar", "grammar"]].filter(([k]) => s.due[k]).map(([k, l]) => `${s.due[k]} ${l}`).join(" · ")})</span>`
-      : s.next_due ? `None today <span class="muted">· ${s.next_due_count} due ${dueLabel(s.next_due).toLowerCase()}</span>` : `<span class="muted">No cards yet</span>`;
-    const waiting = s.waiting.length
-      ? s.waiting.map((w) => `<a href="#" class="ielts-note" data-path="${esc(w.path)}">${esc(w.title)}</a>`).join("<br>")
-      : `<span class="muted">None</span>`;
-
-    $("#ielts-body").innerHTML = `
-      ${notices.map((n) => `<div class="notice small">${n}</div>`).join("")}
-      <div class="ielts-grid">
-        <span class="k">Today (${esc(s.weekday)})</span>
-        <span class="v"><b>${esc(s.skill)}</b></span>
-        <span class="k">Review</span><span class="v">${due}${s.due_total ? ` <code>/ielts review</code>` : ""}</span>
-        <span class="k">Feedback</span><span class="v">${waiting}</span>
-        <span class="k">Studied</span><span class="v">${s.minutes_today ? `${s.minutes_today} min today` : `<span class="muted">Nothing logged today</span>`}</span>
-      </div>
-      ${s.weekly_focus.length ? `<div class="sub-label">This week's focus</div><ul class="ielts-focus">${s.weekly_focus.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
-      <div class="ielts-actions">
-        <button class="ghost" id="ielts-copy" title="Paste into Claude Code (opened in the vault folder)">Copy <code>/ielts today</code></button>
-        <a class="ghost" href="${esc(s.overview_uri)}">Overview in Obsidian ↗</a>
-      </div>`;
-  }
-
-  function initIelts() {
-    $("#ielts-body").addEventListener("click", async (e) => {
-      if (e.target.closest("#ielts-copy")) {
-        try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today"); }
-        catch { toast("Couldn't copy — type /ielts today in Claude Code"); }
-      } else if (e.target.closest(".ielts-note")) {
-        e.preventDefault();
-        go("notes");
-        Nova.views.notes.openNote(e.target.closest(".ielts-note").dataset.path);
-      }
-    });
-    on("records-changed", () => Nova.current === "today" && loadIelts());
+  // IELTS 的一行提醒：今天練哪一項、幾張卡片要複習、考試倒數
+  function ieltsReminder(s) {
+    if (!s?.available) return "";
+    const parts = [`<b>${esc(s.skill)}</b> today`];
+    if (s.due_total) parts.push(`${s.due_total} card${s.due_total === 1 ? "" : "s"} to review`);
+    if (s.days_to_exam != null && s.days_to_exam >= 0) parts.push(`exam in ${s.days_to_exam} days`);
+    const hint = s.needs_diagnostic ? "Take a full mock test first"
+      : s.no_exam_date ? "No exam date yet" : s.sprint_soon ? "Switch to Final sprint" : "";
+    return `<div class="dl-ielts" title="Click to copy /ielts today for Claude Code">
+      <span class="dl-ielts-tag">IELTS</span>
+      <span class="dl-main"><span class="dl-title">${parts.join(" · ")}</span>
+        <span class="dl-meta">${hint ? `${esc(hint)} · ` : ""}copy <code>/ielts today</code></span></span></div>`;
   }
 
   // ---------- 世界時鐘：台灣、法國 ----------
@@ -309,6 +270,25 @@ Nova.views.today = (() => {
     { label: "Taiwan", city: "Taipei", tz: "Asia/Taipei", flag: "🇹🇼" },
     { label: "France", city: "Paris", tz: "Europe/Paris", flag: "🇫🇷" },
   ];
+  let glance = { weather: [], fx: null };  // 天氣依順序對應上面兩個時鐘（WEATHER_PLACES）
+  const WMO = [  // Open-Meteo 天氣代碼
+    [[0], "☀️", "🌙", "Clear"], [[1], "🌤️", "🌙", "Mostly clear"], [[2], "⛅", "☁️", "Partly cloudy"], [[3], "☁️", "☁️", "Overcast"],
+    [[45, 48], "🌫️", "🌫️", "Fog"], [[51, 53, 55, 56, 57], "🌦️", "🌧️", "Drizzle"], [[61, 63, 65, 66, 67, 80, 81, 82], "🌧️", "🌧️", "Rain"],
+    [[71, 73, 75, 77, 85, 86], "🌨️", "🌨️", "Snow"], [[95, 96, 99], "⛈️", "⛈️", "Thunderstorm"],
+  ];
+  const weatherLine = (w) => {
+    if (!w) return "";
+    const [, day, night, label] = WMO.find(([codes]) => codes.includes(w.code)) || [[], "🌡️", "🌡️", ""];
+    return `<div class="clock-weather" title="${esc(w.name)} · ${label}">${w.is_day ? day : night} ${Math.round(w.temp)}°
+      <span class="muted">${esc(w.name)} · ${Math.round(w.min)}°–${Math.round(w.max)}°</span></div>`;
+  };
+  async function loadGlance() {
+    try { glance = await api("/api/glance"); } catch { return; }
+    const fx = glance.fx;
+    $("#fx-line").innerHTML = fx ? `<span>💶 1 € = <b>${fx.rate.toFixed(2)}</b> NT$</span>
+      <span class="muted">100 € ≈ ${Math.round(fx.rate * 100).toLocaleString("en-US")} NT$ · ${new Date(fx.updated * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>` : "";
+    renderClocks();
+  }
   const tzOffset = (tz, d) => {  // 該時區相對 UTC 的分鐘數（含夏令時間）
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
       year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" })
@@ -327,6 +307,7 @@ Nova.views.today = (() => {
         <div class="clock-place"><span>${c.flag}</span> ${c.label} <span class="muted">· ${c.city}</span></div>
         <div class="clock-time">${time}<span class="clock-sec">${sec}</span></div>
         <div class="clock-meta">${date} <span class="muted">· ${note}</span></div>
+        ${weatherLine(glance.weather[i])}
       </div>`;
     }).join("");
   }
@@ -334,6 +315,28 @@ Nova.views.today = (() => {
     try { localStorage.removeItem("nova.focus"); } catch {}  // 舊的番茄鐘狀態
     renderClocks();
     setInterval(renderClocks, 1000);
+    loadGlance();
+    setInterval(loadGlance, 15 * 60 * 1000);
+  }
+
+  // ---------- 需要注意：今天收件匣整理報告裡的 🔴 ----------
+  async function loadAttention() {
+    const box = $("#attention-body");
+    let t;
+    try { t = await api("/api/daily/triage"); }
+    catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; }
+    if (!t.report) {
+      const weekend = [0, 6].includes(new Date().getDay());
+      box.innerHTML = `<p class="muted small">${weekend ? "No inbox triage on weekends." : "Today's inbox triage hasn't arrived yet — it runs on weekdays at 7:45."}</p>`;
+      return;
+    }
+    box.innerHTML = (t.red.length ? t.red.map((m) => `
+      <div class="att-item">
+        <div class="att-head">${m.kind ? `<span class="tag">${esc(m.kind)}</span>` : ""}
+          ${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noreferrer">${esc(m.sender)}</a>` : `<b>${esc(m.sender)}</b>`}</div>
+        <div class="att-text">${esc(m.summary)}</div>
+      </div>`).join("") : `<p class="muted small">🎉 Nothing needs handling today.</p>`) +
+      `<button class="link-btn att-more" data-id="${esc(t.report.id)}">${t.yellow ? `🟡 ${t.yellow} more this week · ` : ""}Open today's report →</button>`;
   }
 
   // ---------- 側欄 Mail 的未讀數（學校信件） ----------
@@ -350,12 +353,19 @@ Nova.views.today = (() => {
 
   return {
     init() {
-      initTasks(); initInbox(); initIelts(); initClocks();
+      initTasks(); initInbox(); initClocks();
+      $("#attention-body").addEventListener("click", (e) => {
+        if (e.target.closest(".att-more")) go("daily");
+      });
       on("tasks-changed", () => Nova.current === "today" && loadDeadlines());
-      $("#dl-list").addEventListener("click", () => go("calendar"));
+      $("#dl-list").addEventListener("click", async (e) => {
+        if (!e.target.closest(".dl-ielts")) return go("calendar");
+        try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today — paste it into Claude Code"); }
+        catch { toast("Couldn't copy — type /ielts today in Claude Code"); }
+      });
     },
     show() {
-      loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadIelts(); loadDeadlines();
+      loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadDeadlines(); loadAttention();
     },
   };
 })();

@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import calendar_feed, daily, ielts, inbox, journal, links, mail, notion_sync, tasks, vault
+from services import calendar_feed, daily, glance, ielts, inbox, journal, links, mail, notion_sync, tasks, vault
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -233,6 +233,18 @@ def mail_message(msg_id: str):
 def daily_overview(refresh: bool = False):
     return {"configured": bool(config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD),
             "feeds": daily.overview(refresh) if config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD else []}
+
+
+@app.get("/api/daily/triage")
+def daily_triage():
+    if not (config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD):
+        return {"report": None}
+    return daily.triage_today()
+
+
+@app.get("/api/glance")
+def glance_overview():
+    return glance.overview()
 
 
 @app.get("/api/daily/{msg_id}")
