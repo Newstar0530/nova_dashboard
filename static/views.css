@@ -442,10 +442,19 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 .dl-ielts code { font-family: var(--mono); font-size: 11px; color: #d6c8ff; }
 
 /* 需要注意（收件匣整理的 🔴） */
-.att-item { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px; border-left: 3px solid var(--dl-urgent);
-  background: color-mix(in srgb, var(--dl-urgent) 8%, transparent); }
+.att-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  border-left: 3px solid var(--dl-urgent); background: color-mix(in srgb, var(--dl-urgent) 8%, transparent);
+  max-height: 400px; transition: opacity .4s, max-height .45s var(--ease), padding .45s, margin .45s, background .3s; }
+.att-item .check { margin-top: 1px; }
+.att-body { flex: 1; min-width: 0; }
+.att-item.done { border-left-color: var(--line-strong); background: var(--surface); }
+.att-item.done .check { background: var(--grad-fill); border-color: transparent; }
+.att-item.done .att-head a, .att-item.done .att-head b, .att-item.done .att-text {
+  color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); }
+.att-item.leaving { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; overflow: hidden; }
+.att-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .att-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .att-head a { color: var(--ink); text-decoration: none; font-weight: 500; }
 .att-head a:hover { color: var(--accent-3); }
 .att-text { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
-.att-more { margin-top: 6px; }
+.att-more, .att-toggle { margin-top: 6px; }

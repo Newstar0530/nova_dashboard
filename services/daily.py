@@ -3,8 +3,11 @@
 DAILY_FEEDS 設定每個來源：名稱=主旨開頭（例如 `AI daily digest=[AI 每日摘要]`）。
 只用一次 Gmail 搜尋抓所有來源最近的信，再依主旨開頭分組；結果快取幾分鐘。
 """
+import hashlib
 import html
+import json
 import re
+import threading
 import time
 from datetime import date, datetime
 from urllib.parse import parse_qs, urlparse
@@ -84,8 +87,33 @@ def _parse_item(li: str) -> dict:
     m = re.match(r"【([^】]+)】(.*)", text)
     kind, rest = (m.group(1), m.group(2)) if m else ("", text)
     sender, _, summary = rest.partition("｜")
-    return {"kind": kind, "sender": sender.strip(), "summary": summary.strip(),
+    return {"key": hashlib.sha1(text.encode()).hexdigest()[:12],  # 打勾記錄用
+            "kind": kind, "sender": sender.strip(), "summary": summary.strip(),
             "url": _gmail_url(link.group(1)) if link else None}
+
+
+# 打勾（處理完）的項目：{報告 id: [項目 key]}，存在工作台資料夾，只留最近幾份報告
+DONE_FILE = config.BASE_DIR / ".attention_done.json"
+DONE_KEEP = 30
+_done_lock = threading.Lock()
+
+
+def _load_done() -> dict:
+    try:
+        return json.loads(DONE_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def set_done(report_id: str, key: str, done: bool) -> list[str]:
+    with _done_lock:
+        data = _load_done()
+        keys = set(data.get(report_id, []))
+        (keys.add if done else keys.discard)(key)
+        data[report_id] = sorted(keys)
+        data = dict(sorted(data.items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else 0)[-DONE_KEEP:])
+        DONE_FILE.write_text(json.dumps(data), encoding="utf-8")
+        return data[report_id]
 
 
 def triage_today() -> dict:
@@ -95,12 +123,12 @@ def triage_today() -> dict:
     if not latest or not latest["received"] or \
             datetime.fromisoformat(latest["received"]).astimezone().date() != date.today():
         return {"report": None}
-    if latest["id"] in _triage_cache:
-        return _triage_cache[latest["id"]]
-    m = mail.get_message(latest["id"], peek=True)  # 不要因為工作台讀了就變成已讀
-    sections = {icon: [_parse_item(li) for li in _ITEM.findall(body)] for icon, body in _SECTION.findall(m["body_html"])}
-    result = {"report": {"id": latest["id"], "title": latest["title"], "received": latest["received"],
-                         "is_read": latest["is_read"]},
-              "red": sections.get("🔴", []), "yellow": len(sections.get("🟡", []))}
-    _triage_cache[latest["id"]] = result
-    return result
+    if latest["id"] not in _triage_cache:
+        m = mail.get_message(latest["id"], peek=True)  # 不要因為工作台讀了就變成已讀
+        sections = {icon: [_parse_item(li) for li in _ITEM.findall(body)] for icon, body in _SECTION.findall(m["body_html"])}
+        _triage_cache[latest["id"]] = {
+            "report": {"id": latest["id"], "title": latest["title"], "received": latest["received"]},
+            "red": sections.get("🔴", []), "yellow": len(sections.get("🟡", []))}
+    result = _triage_cache[latest["id"]]
+    done = set(_load_done().get(latest["id"], []))
+    return {**result, "red": [{**item, "done": item["key"] in done} for item in result["red"]]}

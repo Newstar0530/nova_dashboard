@@ -364,13 +364,45 @@ Nova.views.today = (() => {
       box.innerHTML = reminder + `<p class="muted small">${weekend ? "No inbox triage on weekends." : "Today's inbox triage hasn't arrived yet — it runs on weekdays at 7:45."}</p>`;
       return;
     }
-    box.innerHTML = reminder + (t.red.length ? t.red.map((m) => `
-      <div class="att-item">
-        <div class="att-head">${m.kind ? `<span class="tag">${esc(m.kind)}</span>` : ""}
-          ${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noreferrer">${esc(m.sender)}</a>` : `<b>${esc(m.sender)}</b>`}</div>
-        <div class="att-text">${esc(m.summary)}</div>
-      </div>`).join("") : `<p class="muted small">🎉 Nothing needs handling today.</p>`) +
-      `<button class="link-btn att-more" data-id="${esc(t.report.id)}">${t.yellow ? `🟡 ${t.yellow} more this week · ` : ""}Open today's report →</button>`;
+    attention = t;
+    const shown = t.red.filter((m) => showDoneAtt || !m.done);
+    const doneCount = t.red.filter((m) => m.done).length;
+    box.innerHTML = reminder + (shown.length ? shown.map((m) => `
+      <div class="att-item${m.done ? " done" : ""}" data-key="${esc(m.key)}">
+        <button class="check" aria-label="${m.done ? "Mark as not handled" : "Mark as handled"}">${m.done ? "✓" : ""}</button>
+        <div class="att-body">
+          <div class="att-head">${m.kind ? `<span class="tag">${esc(m.kind)}</span>` : ""}
+            ${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noreferrer">${esc(m.sender)}</a>` : `<b>${esc(m.sender)}</b>`}</div>
+          <div class="att-text">${esc(m.summary)}</div>
+        </div>
+      </div>`).join("") : `<p class="muted small">🎉 ${t.red.length ? "All handled for today." : "Nothing needs handling today."}</p>`) +
+      `<div class="att-foot">
+        <button class="link-btn att-more">${t.yellow ? `🟡 ${t.yellow} more this week · ` : ""}Open today's report →</button>
+        ${doneCount ? `<button class="link-btn att-toggle">${showDoneAtt ? "Hide" : "Show"} ${doneCount} handled</button>` : ""}
+      </div>`;
+  }
+
+  // 打勾 = 已處理：先打勾劃線，再淡出消失（跟待辦一樣）；記在工作台，兩台電腦都看得到
+  let attention = null, showDoneAtt = false;
+  async function toggleAttention(row) {
+    const item = attention?.red.find((m) => m.key === row.dataset.key);
+    if (!item) return;
+    const done = !item.done;
+    row.classList.toggle("done", done);
+    $(".check", row).textContent = done ? "✓" : "";
+    try {
+      await api(`/api/daily/triage/${attention.report.id}/${item.key}`, { method: "PUT", body: { done } });
+    } catch (err) { toast(err.message); return loadAttention(); }
+    item.done = done;
+    if (done) {
+      toast("Handled ✓");
+      if (!showDoneAtt) {
+        setTimeout(() => row.classList.add("leaving"), 450);
+        setTimeout(loadAttention, 900);
+        return;
+      }
+    }
+    loadAttention();
   }
 
   // ---------- 側欄 Mail 的未讀數（學校信件） ----------
@@ -391,6 +423,8 @@ Nova.views.today = (() => {
       initFx();
       $("#attention-body").addEventListener("click", async (e) => {
         if (e.target.closest(".att-more")) return go("daily");
+        if (e.target.closest(".att-toggle")) { showDoneAtt = !showDoneAtt; return loadAttention(); }
+        if (e.target.closest(".att-item .check")) return toggleAttention(e.target.closest(".att-item"));
         if (!e.target.closest(".dl-ielts")) return;
         try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today — paste it into Claude Code"); }
         catch { toast("Couldn't copy — type /ielts today in Claude Code"); }

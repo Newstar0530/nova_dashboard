@@ -2,6 +2,7 @@
 import asyncio
 import imaplib
 import os
+import re
 import webbrowser
 from contextlib import asynccontextmanager
 from datetime import date
@@ -240,6 +241,17 @@ def daily_triage():
     if not (config.GMAIL_ADDRESS and config.GMAIL_APP_PASSWORD):
         return {"report": None}
     return daily.triage_today()
+
+
+class AttentionDone(BaseModel):
+    done: bool
+
+
+@app.put("/api/daily/triage/{report_id}/{key}")
+def daily_triage_done(report_id: str, key: str, body: AttentionDone):
+    if not report_id.isdigit() or not re.fullmatch(r"[0-9a-f]{12}", key):
+        raise HTTPException(400, "Invalid item")
+    return {"done": daily.set_done(report_id, key, body.done)}
 
 
 @app.get("/api/glance")
