@@ -288,7 +288,7 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
   .rs > :not(.rs-gutter) { flex: none; }
   .today-grid, .cal-layout, .split, .notes-layout, .records-grid { display: flex; flex-direction: column; height: auto; min-height: 0; }
   .rs-col > .panel { overflow: visible; }
-  #card-schedule, #card-mail { max-height: 460px; }
+  #card-schedule { max-height: 460px; }
   #card-inbox, #card-tasks { height: 440px; }
   #card-diary { min-height: 220px; }
   .cal-grid { min-height: 420px; }

@@ -393,22 +393,16 @@ Nova.views.today = (() => {
     tick = setInterval(renderFocus, 1000);
   }
 
-  // ---------- 學校信件（前 6 封） ----------
-  async function loadMail() {
-    const body = $("#today-mail");
+  // ---------- 側欄 Mail 的未讀數（學校信件） ----------
+  async function loadMailBadge() {
     try {
       const s = await api("/api/mail/status");
-      if (!s.configured) { body.innerHTML = `<div class="notice">Gmail is not set up yet (see the README).</div>`; return; }
+      if (!s.configured) return;
       const msgs = await api("/api/mail/messages?top=40&only_school=true");
       const unread = msgs.filter((m) => !m.is_read).length;
       const badge = $("#mail-badge");
       badge.hidden = !unread; badge.textContent = unread;
-      body.innerHTML = msgs.length ? msgs.slice(0, 6).map((m) => `
-        <button class="item mail-item${m.is_read ? "" : " unread"}" data-id="${esc(m.id)}">
-          <div class="mail-meta"><span>${esc(m.from)}</span><span>${fmtTime(m.received)}</span></div>
-          <div class="title">${esc(m.subject)}</div>
-        </button>`).join("") : `<p class="muted small">No recent school mail</p>`;
-    } catch (e) { body.innerHTML = `<div class="notice">${esc(e.message)}</div>`; }
+    } catch {}
   }
 
   // ---------- 今日日記（自動儲存） ----------
@@ -439,14 +433,10 @@ Nova.views.today = (() => {
   return {
     init() {
       initTasks(); initInbox(); initCheckin(); initIelts(); initFocus(); initDiary();
-      $("#today-mail").addEventListener("click", (e) => {
-        const item = e.target.closest(".mail-item");
-        if (item) { go("mail"); Nova.views.mail.open(item.dataset.id); }
-      });
       on("settings-changed", loadDay);
     },
     show() {
-      loadSchedule(); loadTasks(); loadInbox(); loadMail(); loadIelts();
+      loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadIelts();
       loadDay().catch((e) => toast(e.message));
     },
   };
