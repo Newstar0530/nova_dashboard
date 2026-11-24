@@ -25,11 +25,11 @@ IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com").strip()
 MAIL_ACCOUNTS = os.getenv("MAIL_ACCOUNTS", "").strip()
 
 # 每日資訊：Claude 排程任務寄到 Gmail 的報告，依信件主旨開頭辨識
-# 格式：名稱=主旨開頭，用分號分隔
+# 格式：名稱=主旨開頭，用分號分隔；排程改過主旨時可用 | 列出舊的開頭
 DAILY_FEEDS = os.getenv(
     "DAILY_FEEDS",
-    "Inbox triage=[收件匣整理];AI daily digest=[AI 每日摘要];"
-    "Student deals=[留學生交通住宿優惠];AI stocks weekly=[AI 股價影響週報]",
+    "Inbox triage=[收件匣整理];Job openings=[工作機會];AI daily digest=[AI 每日摘要];"
+    "Student deals=[留法優惠與獎學金]|[留學生交通住宿優惠];AI stocks weekly=[AI 股價影響週報]",
 ).strip()
 
 # Today 頁世界時鐘旁的天氣：名稱=緯度,經度，用分號分隔（台灣、法國各一個）

@@ -21,19 +21,25 @@ _cache: tuple[float, list[dict]] | None = None
 
 
 def feeds() -> list[dict]:
+    """主旨開頭可以用 | 列出好幾個（排程改過主旨時，舊信也找得到）；第一個是現在用的。"""
     out = []
     for part in config.DAILY_FEEDS.split(";"):
         name, _, prefix = part.partition("=")
-        if name.strip() and prefix.strip():
+        prefixes = [p.strip() for p in prefix.split("|") if p.strip()]
+        if name.strip() and prefixes:
             out.append({"key": re.sub(r"\W+", "-", name.strip().lower()).strip("-"),
-                        "name": name.strip(), "prefix": prefix.strip()})
+                        "name": name.strip(), "prefix": prefixes[0], "prefixes": prefixes})
     return out
 
 
 def _query(fs: list[dict]) -> str:
     # Gmail 搜尋會忽略括號，所以只搜括號內的文字，再在本機比對完整的主旨開頭
-    terms = [f'subject:"{f["prefix"].strip("[]【】 ")}"' for f in fs]
+    terms = [f'subject:"{p.strip("[]【】 ")}"' for f in fs for p in f["prefixes"]]
     return " OR ".join(terms) + " newer_than:60d"
+
+
+def _match(subject: str, prefixes: list[str]) -> str | None:
+    return next((p for p in prefixes if subject.startswith(p)), None)
 
 
 def overview(refresh: bool = False) -> list[dict]:
@@ -44,11 +50,11 @@ def overview(refresh: bool = False) -> list[dict]:
     msgs = mail.list_messages(top=100, q=_query(fs)) if fs else []
     result = []
     for f in fs:
-        issues = [m for m in msgs if m["subject"].startswith(f["prefix"])][:HISTORY]
+        issues = [(m, p) for m in msgs if (p := _match(m["subject"], f["prefixes"]))][:HISTORY]
         result.append({**f, "issues": [
-            {"id": m["id"], "subject": m["subject"], "title": m["subject"][len(f["prefix"]):].strip(),
+            {"id": m["id"], "subject": m["subject"], "title": m["subject"][len(p):].strip(),
              "received": m["received"], "is_read": m["is_read"], "web_link": m["web_link"]}
-            for m in issues
+            for m, p in issues
         ]})
     _cache = (time.time(), result)
     return result
