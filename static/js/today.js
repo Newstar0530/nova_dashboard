@@ -242,7 +242,7 @@ Nova.views.today = (() => {
         <span class="dl-dots">${"●".repeat(Math.min(due.length, 3))}</span></div>`;
     }).join("");
 
-    $("#dl-list").innerHTML = ieltsReminder(ielts) + (open.length ? open.map((t) => `
+    $("#dl-list").innerHTML = (open.length ? open.map((t) => `
       <div class="dl-item ${deadlineLevel(t.due)}">
         <span class="dl-count">${countdown(t.due)}</span>
         <span class="dl-main"><span class="dl-title">${esc(t.text)}</span>
@@ -259,10 +259,10 @@ Nova.views.today = (() => {
     if (s.days_to_exam != null && s.days_to_exam >= 0) parts.push(`exam in ${s.days_to_exam} days`);
     const hint = s.needs_diagnostic ? "Take a full mock test first"
       : s.no_exam_date ? "No exam date yet" : s.sprint_soon ? "Switch to Final sprint" : "";
-    return `<div class="dl-ielts" title="Click to copy /ielts today for Claude Code">
+    return `<button class="dl-ielts" title="Click to copy /ielts today for Claude Code">
       <span class="dl-ielts-tag">IELTS</span>
       <span class="dl-main"><span class="dl-title">${parts.join(" · ")}</span>
-        <span class="dl-meta">${hint ? `${esc(hint)} · ` : ""}copy <code>/ielts today</code></span></span></div>`;
+        <span class="dl-meta">${hint ? `${esc(hint)} · ` : ""}copy <code>/ielts today</code></span></span></button>`;
   }
 
   // ---------- 世界時鐘：台灣、法國 ----------
@@ -284,10 +284,43 @@ Nova.views.today = (() => {
   };
   async function loadGlance() {
     try { glance = await api("/api/glance"); } catch { return; }
-    const fx = glance.fx;
-    $("#fx-line").innerHTML = fx ? `<span>💶 1 € = <b>${fx.rate.toFixed(2)}</b> NT$</span>
-      <span class="muted">100 € ≈ ${Math.round(fx.rate * 100).toLocaleString("en-US")} NT$ · ${new Date(fx.updated * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>` : "";
+    renderFx();
     renderClocks();
+  }
+
+  // 歐元 ⇄ 台幣換算（方向與金額記在瀏覽器）
+  const FX_KEY = "nova.fx";
+  let fxState = { toTwd: true, amount: "100" };
+  try { fxState = { ...fxState, ...JSON.parse(localStorage.getItem(FX_KEY) || "{}") }; } catch {}
+  const saveFx = () => { try { localStorage.setItem(FX_KEY, JSON.stringify(fxState)); } catch {} };
+  function renderFx() {
+    const fx = glance.fx;
+    $("#fx").hidden = !fx;
+    if (!fx) return;
+    $("#fx-from").textContent = fxState.toTwd ? "€" : "NT$";
+    $("#fx-to").textContent = fxState.toTwd ? "NT$" : "€";
+    const input = $("#fx-amount");
+    if (document.activeElement !== input) input.value = fxState.amount;
+    const n = parseFloat(input.value);
+    const out = fxState.toTwd ? n * fx.rate : n / fx.rate;
+    $("#fx-result").textContent = Number.isFinite(out) && input.value !== ""
+      ? out.toLocaleString("en-US", { maximumFractionDigits: fxState.toTwd ? 0 : 2, minimumFractionDigits: fxState.toTwd ? 0 : 2 })
+      : "–";
+    const when = new Date(fx.updated * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    $("#fx-rate").textContent = fxState.toTwd
+      ? `1 € = ${fx.rate.toFixed(2)} NT$ · rate of ${when}`
+      : `1 NT$ = ${(1 / fx.rate).toFixed(4)} € · rate of ${when}`;
+  }
+  function initFx() {
+    $("#fx-amount").addEventListener("input", (e) => { fxState.amount = e.target.value; saveFx(); renderFx(); });
+    $("#fx-amount").addEventListener("focus", (e) => e.target.select());
+    $("#fx-swap").addEventListener("click", () => {
+      // 交換方向時，把剛才的結果當成新的金額，比較直覺
+      const r = $("#fx-result").textContent.replace(/,/g, "");
+      fxState.toTwd = !fxState.toTwd;
+      if (r !== "–") fxState.amount = r;
+      saveFx(); renderFx();
+    });
   }
   const tzOffset = (tz, d) => {  // 該時區相對 UTC 的分鐘數（含夏令時間）
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
@@ -322,15 +355,16 @@ Nova.views.today = (() => {
   // ---------- 需要注意：今天收件匣整理報告裡的 🔴 ----------
   async function loadAttention() {
     const box = $("#attention-body");
-    let t;
-    try { t = await api("/api/daily/triage"); }
+    let t, ielts;
+    try { [t, ielts] = await Promise.all([api("/api/daily/triage"), api("/api/ielts").catch(() => null)]); }
     catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; }
+    const reminder = ieltsReminder(ielts);
     if (!t.report) {
       const weekend = [0, 6].includes(new Date().getDay());
-      box.innerHTML = `<p class="muted small">${weekend ? "No inbox triage on weekends." : "Today's inbox triage hasn't arrived yet — it runs on weekdays at 7:45."}</p>`;
+      box.innerHTML = reminder + `<p class="muted small">${weekend ? "No inbox triage on weekends." : "Today's inbox triage hasn't arrived yet — it runs on weekdays at 7:45."}</p>`;
       return;
     }
-    box.innerHTML = (t.red.length ? t.red.map((m) => `
+    box.innerHTML = reminder + (t.red.length ? t.red.map((m) => `
       <div class="att-item">
         <div class="att-head">${m.kind ? `<span class="tag">${esc(m.kind)}</span>` : ""}
           ${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noreferrer">${esc(m.sender)}</a>` : `<b>${esc(m.sender)}</b>`}</div>
@@ -354,15 +388,15 @@ Nova.views.today = (() => {
   return {
     init() {
       initTasks(); initInbox(); initClocks();
-      $("#attention-body").addEventListener("click", (e) => {
-        if (e.target.closest(".att-more")) go("daily");
-      });
-      on("tasks-changed", () => Nova.current === "today" && loadDeadlines());
-      $("#dl-list").addEventListener("click", async (e) => {
-        if (!e.target.closest(".dl-ielts")) return go("calendar");
+      initFx();
+      $("#attention-body").addEventListener("click", async (e) => {
+        if (e.target.closest(".att-more")) return go("daily");
+        if (!e.target.closest(".dl-ielts")) return;
         try { await navigator.clipboard.writeText("/ielts today"); toast("Copied /ielts today — paste it into Claude Code"); }
         catch { toast("Couldn't copy — type /ielts today in Claude Code"); }
       });
+      on("tasks-changed", () => Nova.current === "today" && loadDeadlines());
+      $("#dl-list").addEventListener("click", () => go("calendar"));
     },
     show() {
       loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadDeadlines(); loadAttention();
