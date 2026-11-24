@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=25">
-  <link rel="stylesheet" href="/static/views.css?v=25">
+  <link rel="stylesheet" href="/static/style.css?v=28">
+  <link rel="stylesheet" href="/static/views.css?v=28">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -51,6 +51,15 @@
                 <a class="ghost" href="#calendar">Calendar →</a>
               </div>
               <div id="schedule-body" class="scroll"></div>
+            </section>
+
+            <section data-grow="1" class="panel reveal" id="card-deadlines">
+              <div class="panel-head">
+                <h2 class="bt">Deadlines <span class="eyebrow">Next 14 days</span></h2>
+                <span class="muted small" id="deadline-summary"></span>
+              </div>
+              <div class="dl-strip" id="dl-strip"></div>
+              <div id="dl-list" class="scroll"></div>
             </section>
           </div>
 
@@ -232,15 +241,15 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=25"></script>
-  <script src="/static/js/splitter.js?v=25"></script>
-  <script src="/static/js/charts.js?v=25"></script>
-  <script src="/static/js/today.js?v=25"></script>
-  <script src="/static/js/calendar.js?v=25"></script>
-  <script src="/static/js/mail.js?v=25"></script>
-  <script src="/static/js/daily.js?v=25"></script>
-  <script src="/static/js/notes.js?v=25"></script>
-  <script src="/static/js/records.js?v=25"></script>
-  <script src="/static/fx.js?v=25"></script>
+  <script src="/static/js/core.js?v=28"></script>
+  <script src="/static/js/splitter.js?v=28"></script>
+  <script src="/static/js/charts.js?v=28"></script>
+  <script src="/static/js/today.js?v=28"></script>
+  <script src="/static/js/calendar.js?v=28"></script>
+  <script src="/static/js/mail.js?v=28"></script>
+  <script src="/static/js/daily.js?v=28"></script>
+  <script src="/static/js/notes.js?v=28"></script>
+  <script src="/static/js/records.js?v=28"></script>
+  <script src="/static/fx.js?v=28"></script>
 </body>
 </html>

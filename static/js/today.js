@@ -215,6 +215,39 @@ Nova.views.today = (() => {
     on("vault-changed", () => Nova.current === "today" && loadInbox());
   }
 
+  // ---------- 截止倒數：未完成、有截止日的待辦（逾期的也算） ----------
+  const DL_DAYS = 14;
+  async function loadDeadlines() {
+    let list;
+    try { list = await api("/api/tasks"); }
+    catch (e) { $("#dl-list").innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; }
+    const open = list.filter((t) => !t.done && t.due && daysLeft(t.due) < DL_DAYS)
+      .sort((a, b) => a.due.localeCompare(b.due) || a.text.localeCompare(b.text));
+    const later = list.filter((t) => !t.done && t.due && daysLeft(t.due) >= DL_DAYS).length;
+    const week = open.filter((t) => daysLeft(t.due) <= 7).length;
+    $("#deadline-summary").textContent = open.length ? `${week} this week` : "";
+
+    // 14 天的小日曆條：每天一格，點點 = 當天截止的數量
+    const start = new Date();
+    $("#dl-strip").innerHTML = Array.from({ length: DL_DAYS }, (_, i) => {
+      const d = addDays(start, i), iso = isoDate(d);
+      const due = open.filter((t) => t.due === iso);
+      const lvl = due.length ? deadlineLevel(iso) : "";
+      return `<div class="dl-day${i === 0 ? " today" : ""}${d.getDay() === 1 && i ? " mon" : ""}${lvl ? ` has ${lvl}` : ""}"
+        title="${fmtDay(iso)}${due.length ? ` · ${due.map((t) => t.text).join(", ")}` : ""}">
+        <span class="dl-wd">${WEEK[d.getDay()].slice(0, 2)}</span><span class="dl-n">${d.getDate()}</span>
+        <span class="dl-dots">${"●".repeat(Math.min(due.length, 3))}</span></div>`;
+    }).join("");
+
+    $("#dl-list").innerHTML = open.length ? open.map((t) => `
+      <div class="dl-item ${deadlineLevel(t.due)}">
+        <span class="dl-count">${countdown(t.due)}</span>
+        <span class="dl-main"><span class="dl-title">${esc(t.text)}</span>
+          <span class="dl-meta">${fmtDay(t.due)}${taskCourse(t) ? ` · ${esc(taskCourse(t))}` : ""}</span></span>
+      </div>`).join("") + (later ? `<p class="muted small dl-later">+${later} later — see Calendar</p>` : "")
+      : `<p class="muted small">Nothing due in the next ${DL_DAYS} days 🎉</p>${later ? `<p class="muted small">${later} later — see Calendar</p>` : ""}`;
+  }
+
   // ---------- IELTS（30 雅思 資料夾，/ielts skill 的資料） ----------
   let ielts = null;
 
@@ -280,7 +313,7 @@ Nova.views.today = (() => {
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
       year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" })
       .formatToParts(d).map((x) => [x.type, x.value]));
-    return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - d.getTime()) / 60000);
+    return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Math.floor(d.getTime() / 60000) * 60000) / 60000);
   };
   function renderClocks() {
     const now = new Date();
@@ -318,9 +351,11 @@ Nova.views.today = (() => {
   return {
     init() {
       initTasks(); initInbox(); initIelts(); initClocks();
+      on("tasks-changed", () => Nova.current === "today" && loadDeadlines());
+      $("#dl-list").addEventListener("click", () => go("calendar"));
     },
     show() {
-      loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadIelts();
+      loadSchedule(); loadTasks(); loadInbox(); loadMailBadge(); loadIelts(); loadDeadlines();
     },
   };
 })();

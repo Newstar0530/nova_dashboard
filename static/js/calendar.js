@@ -35,12 +35,16 @@ Nova.views.calendar = (() => {
     for (let i = 0; i < 42; i++) {
       const d = addDays(start, i), iso = isoDate(d);
       const evs = eventsOn(iso), ts = tasksOn(iso);
+      const openDue = ts.filter((t) => !t.done);
+      // 截止日排最前面（不會被「+N」藏起來），依緊急程度上色
       const items = [
+        ...openDue.map((t) => `<span class="cal-dl ${deadlineLevel(t.due)}" title="${esc(t.text)} · ${countdown(t.due)}">⚑ ${esc(t.text)}</span>`),
         ...evs.map((e) => `<span class="cal-ev${e.all_day ? " allday" : ""}">${e.all_day ? "" : `<i>${hhmm(e.start)}</i>`}${esc(e.title)}</span>`),
-        ...ts.map((t) => `<span class="cal-task${t.done ? " done" : ""}">${t.done ? "✓" : "☐"} ${esc(t.text)}</span>`),
+        ...ts.filter((t) => t.done).map((t) => `<span class="cal-task done">✓ ${esc(t.text)}</span>`),
       ];
+      const dlLevel = openDue.length ? deadlineLevel(iso) : "";
       const shown = items.slice(0, 3), more = items.length - shown.length;
-      html += `<button class="cal-cell${d.getMonth() !== month ? " out" : ""}${iso === today ? " today" : ""}${iso === selected ? " sel" : ""}" data-date="${iso}">
+      html += `<button class="cal-cell${d.getMonth() !== month ? " out" : ""}${iso === today ? " today" : ""}${iso === selected ? " sel" : ""}${dlLevel ? ` has-dl ${dlLevel}` : ""}" data-date="${iso}">
         <span class="cal-num">${d.getDate()}</span>${shown.join("")}${more > 0 ? `<span class="cal-more">+${more}</span>` : ""}</button>`;
     }
     $("#cal-grid").innerHTML = html;
@@ -50,12 +54,17 @@ Nova.views.calendar = (() => {
     $("#cal-day-title").innerHTML = `${fmtDay(selected)} <span class="eyebrow">${selected === todayISO() ? "Today" : "Day"}</span>`;
     const evs = eventsOn(selected), ts = tasksOn(selected);
     $("#cal-day-body").innerHTML =
+      `<div class="sched-day">Deadlines</div>` +
+      (ts.length ? ts.map((t) => t.done
+        ? `<div class="task done"><span class="check static">✓</span><span class="task-text">${esc(t.text)}</span></div>`
+        : `<div class="dl-item ${deadlineLevel(t.due)}"><span class="dl-count">${countdown(t.due)}</span>
+            <span class="dl-main"><span class="dl-title">${esc(t.text)}</span>${taskCourse(t) ? `<span class="dl-meta">${esc(taskCourse(t))}</span>` : ""}</span></div>`).join("")
+        : `<p class="muted small">Nothing due</p>`) +
+      `<div class="sched-day">Schedule</div>` +
       (evs.length ? evs.map((e) => `<div class="event">
         <span class="ev-time">${e.all_day ? "All day" : `${hhmm(e.start)}<br><span>${hhmm(e.end)}</span>`}</span>
         <span class="ev-main"><b>${esc(e.title)}</b>${e.location ? `<span class="muted small">📍 ${esc(e.location)}</span>` : ""}</span>
         <span class="tag">${esc(e.source)}</span></div>`).join("") : `<p class="muted small">No events</p>`) +
-      `<div class="sched-day">Tasks</div>` +
-      (ts.length ? ts.map((t) => `<div class="task${t.done ? " done" : ""}"><span class="check static">${t.done ? "✓" : ""}</span><span class="task-text">${esc(t.text)}</span></div>`).join("") : `<p class="muted small">No tasks due</p>`) +
       `<form class="task-form" id="cal-add-task"><input class="search" name="text" placeholder="Add a task for this day…" autocomplete="off"><button class="small-btn">Add</button></form>`;
   }
 

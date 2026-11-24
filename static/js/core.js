@@ -71,6 +71,19 @@ function mailDoc(m) {
   </style>${html}`;
 }
 
+// 截止日：距今天幾天、緊急程度（逾期或 0–1 天 urgent、2–3 天 soon、一週內 week）
+const daysLeft = (due) => Math.round((parseISO(due) - parseISO(todayISO())) / 86400000);
+function deadlineLevel(due) {
+  const n = daysLeft(due);
+  return n <= 1 ? "urgent" : n <= 3 ? "soon" : n <= 7 ? "week" : "later";
+}
+// 倒數的短標示：Overdue / Today / 1d / 12d
+function countdown(due) {
+  const n = daysLeft(due);
+  return n < 0 ? `${-n}d late` : n === 0 ? "Today" : `${n}d`;
+}
+const taskCourse = (t) => (t.projects || []).map((p) => p.replace(/^\[\[|\]\]$/g, "").split("|")[0])[0];
+
 // 截止日的相對說明
 function dueLabel(due) {
   if (!due) return "";
