@@ -458,3 +458,18 @@ body.rs-dragging iframe { pointer-events: none; }  /* 拖過信件內容時不�
 .att-head a:hover { color: var(--accent-3); }
 .att-text { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
 .att-more, .att-toggle { margin-top: 6px; }
+
+/* ============ 同步狀態 ============ */
+.sync-pill {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--muted); font: 11px var(--mono); letter-spacing: .04em;
+  transition: border-color .2s, color .2s;
+}
+.sync-pill:hover { border-color: var(--line-strong); color: var(--ink-2); }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tiffany); box-shadow: 0 0 8px var(--tiffany); }
+.sync-pill[data-status="syncing"] .sync-dot { background: var(--accent-3); box-shadow: 0 0 8px var(--accent-3); animation: pulse 1.2s infinite; }
+.sync-pill[data-status="skipped"] .sync-dot { background: #c9a227; box-shadow: none; }
+.sync-pill[data-status="conflict"], .sync-pill[data-status="error"] { border-color: rgba(224, 132, 143, .6); color: #e0848f; }
+.sync-pill[data-status="conflict"] .sync-dot, .sync-pill[data-status="error"] .sync-dot { background: #e0848f; box-shadow: 0 0 8px #e0848f; }
+@media (max-width: 720px) { .sync-pill #sync-text { display: none; } }

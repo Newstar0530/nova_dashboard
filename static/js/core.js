@@ -178,3 +178,39 @@ async function capture(asNote) {
   dialog(`<h3>Save as new note</h3><label>Title<input name="title" required value="${esc(text.slice(0, 30))}"></label>`,
     (fd) => save(fd.get("title")));
 }
+
+// ---------- 知識庫同步狀態（頂部小標籤；點一下立即同步） ----------
+(function syncPill() {
+  const pill = $("#sync-pill");
+  if (!pill) return;
+  const ago = (iso) => {
+    if (!iso) return "not yet";
+    const m = Math.round((Date.now() - new Date(iso)) / 60000);
+    return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+  };
+  const render = (s) => {
+    pill.hidden = !s.available || !s.enabled;
+    pill.dataset.status = s.status;
+    const label = {
+      syncing: "Syncing…",
+      conflict: "Sync conflict",
+      error: "Sync error",
+    }[s.status] || `Synced ${ago(s.last_sync)}`;
+    $("#sync-text").textContent = label;
+    const detail = [s.message, s.conflicts?.length ? `Conflicting files:\n${s.conflicts.join("\n")}` : ""].filter(Boolean).join("\n");
+    pill.title = `Vault ↔ GitHub, every ${s.interval_minutes} min and after edits` + (detail ? `\n\n${detail}` : "") + "\n\nClick to sync now";
+  };
+  const refresh = () => api("/api/sync/status").then(render).catch(() => {});
+  pill.addEventListener("click", async () => {
+    pill.dataset.status = "syncing";
+    $("#sync-text").textContent = "Syncing…";
+    try {
+      const s = await api("/api/sync/now", { method: "POST" });
+      render(s);
+      toast(s.status === "ok" ? `Vault synced — ${s.message}` : s.message || "Sync didn't finish");
+      if (s.status === "ok" && s.pulled) emit("vault-changed");
+    } catch (e) { toast(e.message); refresh(); }
+  });
+  refresh();
+  setInterval(refresh, 30000);
+})();

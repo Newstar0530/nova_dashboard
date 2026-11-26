@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from services import calendar_feed, daily, glance, ielts, inbox, journal, links, mail, notion_sync, tasks, vault
+from services import calendar_feed, daily, glance, ielts, inbox, journal, links, mail, notion_sync, tasks, vault, vault_sync
 
 AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 
@@ -22,6 +22,7 @@ AUTO_SYNC_MINUTES = int(os.getenv("NOTION_AUTO_SYNC_MINUTES", "0"))
 @asynccontextmanager
 async def lifespan(_app):
     config.VAULT_PATH.mkdir(parents=True, exist_ok=True)
+    vault_sync.start_background()  # 知識庫自動同步（不必開 Obsidian）
     task = None
     if AUTO_SYNC_MINUTES > 0 and notion_sync.status()["configured"]:
 
@@ -45,8 +46,13 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 async def _no_stale_assets(request, call_next):
     """前端檔案每次都向伺服器確認（有 ETag，沒改就回 304），更新後不用強制重新整理。"""
     response = await call_next(request)
-    if request.url.path == "/" or request.url.path.startswith("/static/"):
+    path = request.url.path
+    if path == "/" or path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
+    # 在工作台改了知識庫（勾待辦、打卡、記錄…）→ 30 秒後同步到 GitHub
+    elif (request.method in ("POST", "PUT", "PATCH", "DELETE") and path.startswith("/api/")
+          and not path.startswith("/api/sync") and response.status_code < 400):
+        vault_sync.schedule_after_edit()
     return response
 
 
@@ -335,6 +341,16 @@ def tasks_update(task_id: str, body: TaskPatch):
 @app.delete("/api/tasks/{task_id:path}")
 def tasks_delete(task_id: str):
     return tasks.delete_task(task_id)
+
+
+@app.get("/api/sync/status")
+def sync_status():
+    return vault_sync.status()
+
+
+@app.post("/api/sync/now")
+async def sync_now():
+    return await asyncio.to_thread(vault_sync.sync_once, "manual")
 
 
 @app.get("/api/ielts")

@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=32">
-  <link rel="stylesheet" href="/static/views.css?v=32">
+  <link rel="stylesheet" href="/static/style.css?v=16">
+  <link rel="stylesheet" href="/static/views.css?v=16">
 </head>
 <body>
   <!-- 背景：極光、網格、星座（fx.js 會加上 canvas） -->
@@ -23,6 +23,7 @@
   <header class="topbar">
     <div class="brand"><span class="logo">✦</span><span class="grad-text">Nova</span></div>
     <div class="greeting"><span class="dot"></span><span id="greeting"></span></div>
+    <button class="sync-pill" id="sync-pill" hidden title="Vault sync"><span class="sync-dot"></span><span id="sync-text">Sync</span></button>
     <form id="capture" class="capture" autocomplete="off">
       <input id="capture-text" placeholder="Quick capture to Inbox… (Enter to save, Shift+Enter to save as a new note)">
       <button type="submit">Capture</button>
@@ -250,15 +251,15 @@
 
   <dialog id="dlg" class="dlg"></dialog>
 
-  <script src="/static/js/core.js?v=32"></script>
-  <script src="/static/js/splitter.js?v=32"></script>
-  <script src="/static/js/charts.js?v=32"></script>
-  <script src="/static/js/today.js?v=32"></script>
-  <script src="/static/js/calendar.js?v=32"></script>
-  <script src="/static/js/mail.js?v=32"></script>
-  <script src="/static/js/daily.js?v=32"></script>
-  <script src="/static/js/notes.js?v=32"></script>
-  <script src="/static/js/records.js?v=32"></script>
-  <script src="/static/fx.js?v=32"></script>
+  <script src="/static/js/core.js?v=16"></script>
+  <script src="/static/js/splitter.js?v=16"></script>
+  <script src="/static/js/charts.js?v=16"></script>
+  <script src="/static/js/today.js?v=16"></script>
+  <script src="/static/js/calendar.js?v=16"></script>
+  <script src="/static/js/mail.js?v=16"></script>
+  <script src="/static/js/daily.js?v=16"></script>
+  <script src="/static/js/notes.js?v=16"></script>
+  <script src="/static/js/records.js?v=16"></script>
+  <script src="/static/fx.js?v=16"></script>
 </body>
 </html>

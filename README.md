@@ -61,7 +61,7 @@ git clone https://github.com/Newstar0530/nova_dashboard.git workbench
 2. 在 Finder 打開 `workbench`，雙擊 **`start.command`**（第一次若被擋：按右鍵 →「打開」→「打開」）
 3. 瀏覽器自動開啟 http://127.0.0.1:8765
 
-兩台電腦的知識庫靠 Obsidian 的 Git 外掛同步；Notion 同步會依筆記裡的 `notion_id` 認出已存在的檔案，兩台都按「同步」也不會產生重複檔。
+兩台電腦的知識庫由**工作台自動同步到 GitHub**（不必開 Obsidian）：開著工作台就每 5 分鐘 commit → pull → push 一次，在工作台勾待辦、打卡、記錄後 30 秒也會同步。頂部的「Synced …」小標籤顯示狀態，點一下立即同步；兩台改到同一行時會停下來標成紅色的 conflict、不覆蓋任何一邊（到 Obsidian 的 Git: pull 或終端機處理後再點一次）。`VAULT_SYNC_MINUTES` 可調間隔，0 = 關閉。Obsidian 的 Git 外掛可以繼續開著，兩邊同時跑會自動錯開。Notion 同步會依筆記裡的 `notion_id` 認出已存在的檔案，兩台都按「同步」也不會產生重複檔。
 
 ## 設定郵件（學校信箱 → Gmail）
 
@@ -125,6 +125,7 @@ config.py              讀取 .env
 services/vault.py      Obsidian vault 讀寫、搜尋、Markdown 渲染
 services/mail.py       Gmail 郵件（IMAP + 應用程式密碼）
 services/notion_sync.py Notion 資料庫 → Markdown
+services/vault_sync.py  知識庫 ↔ GitHub 自動同步
 services/tasks.py      待辦（讀寫 TaskNotes 外掛格式）
 services/calendar_feed.py ICS 行事曆訂閱（含重複行程）
 services/journal.py    每日紀錄：日記、心情、習慣、學習時數
