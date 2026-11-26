@@ -45,6 +45,8 @@ git clone https://github.com/Newstar0530/nova_dashboard.git workbench
 
 vault 預設在 workbench 同層的 `知識庫`，可用 `.env` 的 `VAULT_PATH` 改成任何資料夾。
 
+**Windows 桌面捷徑**：雙擊 `open_dashboard.bat`（或指向它的捷徑，圖示用 `static/icons/nova.ico`）——工作台已在執行就直接打開網頁，沒有的話在縮小的視窗啟動它。
+
 ### 在 Mac 上執行
 
 需要 **Python 3.10 以上**（macOS 內建的是 3.9，請從 https://www.python.org/downloads/ 安裝）。
