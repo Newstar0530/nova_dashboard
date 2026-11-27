@@ -17,6 +17,8 @@ from datetime import datetime
 import config
 
 INTERVAL_MINUTES = float(os.getenv("VAULT_SYNC_MINUTES", "5"))  # 0 = 關閉自動同步
+# 寫在同步 commit 訊息裡的電腦名稱；沒設就用系統的主機名稱（連 VPN 時可能變成很長的網路名稱）
+DEVICE_NAME = os.getenv("VAULT_SYNC_DEVICE", "").strip() or platform.node() or "dashboard"
 AFTER_EDIT_SECONDS = 30  # 在工作台改了東西後，多久同步一次（期間再改會重新計時）
 
 _lock = threading.Lock()
@@ -84,7 +86,7 @@ def sync_once(reason: str = "timer") -> dict:
         if _git("status", "--porcelain"):
             _git("add", "-A")
             stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            _git("commit", "-m", f"vault backup ({platform.node() or 'dashboard'}): {stamp}")
+            _git("commit", "-m", f"vault backup ({DEVICE_NAME}): {stamp}")
 
         # 2. 拉遠端
         _git("fetch", "origin", branch, timeout=180)
